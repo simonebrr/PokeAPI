@@ -1,0 +1,2441 @@
+[
+    {
+        "id": 273488,
+        "name": "Zapdos",
+        "version": "Cosmos Holo 15/62 | WOTC Employees-Only ©1999 Wizards",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "15/62 ©1999",
+            "pokemon_rarity": "Holo Rare"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it",
+                    "es",
+                    "pt",
+                    "nl"
+                ]
+            },
+            {
+                "name": "pokemon_reverse",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273488/preview_zapdos-cosmos-holo-15-62-wotc-employees-only-1999-wizards-theme-deck-blisters-exclusives.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273488/zapdos-cosmos-holo-15-62-wotc-employees-only-1999-wizards-theme-deck-blisters-exclusives.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273488/show_zapdos-cosmos-holo-15-62-wotc-employees-only-1999-wizards-theme-deck-blisters-exclusives.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273488/preview_zapdos-cosmos-holo-15-62-wotc-employees-only-1999-wizards-theme-deck-blisters-exclusives.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273488/social_zapdos-cosmos-holo-15-62-wotc-employees-only-1999-wizards-theme-deck-blisters-exclusives.jpg"
+            }
+        },
+        "back_image": null
+    },
+    {
+        "id": 273489,
+        "name": "Gengar",
+        "version": "Cosmos Holo 5/62 | WOTC Employees-Only ©1999 Wizards",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "5/62 ©1999",
+            "pokemon_rarity": "Holo Rare"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it",
+                    "es",
+                    "pt",
+                    "nl"
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273489/preview_gengar-cosmos-holo-5-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273489/gengar-cosmos-holo-5-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273489/show_gengar-cosmos-holo-5-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273489/preview_gengar-cosmos-holo-5-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273489/social_gengar-cosmos-holo-5-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": null
+    },
+    {
+        "id": 273490,
+        "name": "Aerodactyl",
+        "version": "Cosmos Holo 1/62 | WOTC Employees-Only ©1999 Wizards",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "1/62 ©1999",
+            "pokemon_rarity": "Holo Rare"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it",
+                    "es",
+                    "pt",
+                    "nl"
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273490/preview_aerodactyl-cosmos-holo-1-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273490/aerodactyl-cosmos-holo-1-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273490/show_aerodactyl-cosmos-holo-1-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273490/preview_aerodactyl-cosmos-holo-1-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273490/social_aerodactyl-cosmos-holo-1-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": null
+    },
+    {
+        "id": 273494,
+        "name": "Articuno",
+        "version": "Cosmos Holo 2/62 | WOTC Employees-Only ©1999 Wizards",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "2/62 ©1999",
+            "pokemon_rarity": "Holo Rare"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it",
+                    "es",
+                    "pt",
+                    "nl"
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273494/preview_articuno-cosmos-holo-2-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273494/articuno-cosmos-holo-2-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273494/show_articuno-cosmos-holo-2-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273494/preview_articuno-cosmos-holo-2-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273494/social_articuno-cosmos-holo-2-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": null
+    },
+    {
+        "id": 273495,
+        "name": "Ditto",
+        "version": "Cosmos Holo 3/62 | WOTC Employees-Only ©1999 Wizards",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "3/62 ©1999",
+            "pokemon_rarity": "Holo Rare"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it",
+                    "es",
+                    "pt",
+                    "nl"
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273495/preview_ditto-cosmos-holo-3-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273495/ditto-cosmos-holo-3-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273495/show_ditto-cosmos-holo-3-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273495/preview_ditto-cosmos-holo-3-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273495/social_ditto-cosmos-holo-3-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": null
+    },
+    {
+        "id": 273496,
+        "name": "Dragonite",
+        "version": "Cosmos Holo 4/62 | WOTC Employees-Only ©1999 Wizards",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "4/62 ©1999",
+            "pokemon_rarity": "Holo Rare"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it",
+                    "es",
+                    "pt",
+                    "nl"
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273496/preview_dragonite-cosmos-holo-4-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273496/dragonite-cosmos-holo-4-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273496/show_dragonite-cosmos-holo-4-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273496/preview_dragonite-cosmos-holo-4-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273496/social_dragonite-cosmos-holo-4-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": null
+    },
+    {
+        "id": 273497,
+        "name": "Haunter",
+        "version": "Cosmos Holo 4/62 | WOTC Employees-Only ©1999 Wizards",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "6/62 ©1999",
+            "pokemon_rarity": "Holo Rare"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it",
+                    "es",
+                    "pt",
+                    "nl"
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273497/preview_haunter-cosmos-holo-4-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273497/haunter-cosmos-holo-4-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273497/show_haunter-cosmos-holo-4-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273497/preview_haunter-cosmos-holo-4-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273497/social_haunter-cosmos-holo-4-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": null
+    },
+    {
+        "id": 273498,
+        "name": "Hitmonlee",
+        "version": "Cosmos Holo 7/62 | WOTC Employees-Only ©1999 Wizards",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "7/62 ©1999",
+            "pokemon_rarity": "Holo Rare"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it",
+                    "es",
+                    "pt",
+                    "nl"
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273498/preview_hitmonlee-cosmos-holo-7-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273498/hitmonlee-cosmos-holo-7-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273498/show_hitmonlee-cosmos-holo-7-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273498/preview_hitmonlee-cosmos-holo-7-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273498/social_hitmonlee-cosmos-holo-7-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": null
+    },
+    {
+        "id": 273499,
+        "name": "Hypno",
+        "version": "Cosmos Holo 8/62 | WOTC Employees-Only ©1999 Wizards",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "8/62 ©1999",
+            "pokemon_rarity": "Holo Rare"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it",
+                    "es",
+                    "pt",
+                    "nl"
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273499/preview_hypno-cosmos-holo-8-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273499/hypno-cosmos-holo-8-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273499/show_hypno-cosmos-holo-8-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273499/preview_hypno-cosmos-holo-8-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273499/social_hypno-cosmos-holo-8-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": null
+    },
+    {
+        "id": 273500,
+        "name": "Kabutops",
+        "version": "Cosmos Holo 9/62 | WOTC Employees-Only ©1999 Wizards",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "9/62 ©1999",
+            "pokemon_rarity": "Holo Rare"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it",
+                    "es",
+                    "pt",
+                    "nl"
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273500/preview_kabutops-cosmos-holo-9-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273500/kabutops-cosmos-holo-9-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273500/show_kabutops-cosmos-holo-9-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273500/preview_kabutops-cosmos-holo-9-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273500/social_kabutops-cosmos-holo-9-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": null
+    },
+    {
+        "id": 273501,
+        "name": "Lapras",
+        "version": "Cosmos Holo 10/62 | WOTC Employees-Only ©1999 Wizards",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "10/62 ©1999",
+            "pokemon_rarity": "Holo Rare"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it",
+                    "es",
+                    "pt",
+                    "nl"
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273501/preview_lapras-cosmos-holo-10-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273501/lapras-cosmos-holo-10-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273501/show_lapras-cosmos-holo-10-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273501/preview_lapras-cosmos-holo-10-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273501/social_lapras-cosmos-holo-10-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": null
+    },
+    {
+        "id": 273502,
+        "name": "Magneton",
+        "version": "Cosmos Holo 11/62 | WOTC Employees-Only ©1999 Wizards",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "11/62 ©1999",
+            "pokemon_rarity": "Holo Rare"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it",
+                    "es",
+                    "pt",
+                    "nl"
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273502/preview_magneton-cosmos-holo-11-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273502/magneton-cosmos-holo-11-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273502/show_magneton-cosmos-holo-11-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273502/preview_magneton-cosmos-holo-11-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273502/social_magneton-cosmos-holo-11-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": null
+    },
+    {
+        "id": 273503,
+        "name": "Moltres",
+        "version": "Cosmos Holo 12/62 | WOTC Employees-Only ©1999 Wizards",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "12/62 ©1999",
+            "pokemon_rarity": "Holo Rare"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it",
+                    "es",
+                    "pt",
+                    "nl"
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273503/preview_moltres-cosmos-holo-12-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273503/moltres-cosmos-holo-12-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273503/show_moltres-cosmos-holo-12-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273503/preview_moltres-cosmos-holo-12-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273503/social_moltres-cosmos-holo-12-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": null
+    },
+    {
+        "id": 273504,
+        "name": "Muk",
+        "version": "Cosmos Holo 13/62 | WOTC Employees-Only ©1999 Wizards",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "13/62 ©1999",
+            "pokemon_rarity": "Holo Rare"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it",
+                    "es",
+                    "pt",
+                    "nl"
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273504/preview_muk-cosmos-holo-13-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273504/muk-cosmos-holo-13-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273504/show_muk-cosmos-holo-13-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273504/preview_muk-cosmos-holo-13-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273504/social_muk-cosmos-holo-13-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": null
+    },
+    {
+        "id": 273505,
+        "name": "Raichu",
+        "version": "Cosmos Holo 14/62 | WOTC Employees-Only ©1999 Wizards",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "14/62 ©1999",
+            "pokemon_rarity": "Holo Rare"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it",
+                    "es",
+                    "pt",
+                    "nl"
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273505/preview_raichu-cosmos-holo-14-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273505/raichu-cosmos-holo-14-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273505/show_raichu-cosmos-holo-14-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273505/preview_raichu-cosmos-holo-14-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273505/social_raichu-cosmos-holo-14-62-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": null
+    },
+    {
+        "id": 273506,
+        "name": "Blastoise",
+        "version": "Cosmos Holo 009/165 | MTG Back \u0026 Black Border",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "009/165R",
+            "pokemon_rarity": "Holo Rare"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it",
+                    "es",
+                    "pt",
+                    "nl"
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273506/preview_blastoise-cosmos-holo-009-165-mtg-back-black-border-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273506/blastoise-cosmos-holo-009-165-mtg-back-black-border-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273506/show_blastoise-cosmos-holo-009-165-mtg-back-black-border-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273506/preview_blastoise-cosmos-holo-009-165-mtg-back-black-border-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273506/social_blastoise-cosmos-holo-009-165-mtg-back-black-border-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": {
+            "url": "/uploads/blueprints/back_image/273506/blastoise-cosmos-holo-009-165-mtg-back-black-border-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/back_image/273506/show_blastoise-cosmos-holo-009-165-mtg-back-black-border-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/back_image/273506/preview_blastoise-cosmos-holo-009-165-mtg-back-black-border-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/back_image/273506/social_blastoise-cosmos-holo-009-165-mtg-back-black-border-wizards-of-the-coast-era-promos.jpg"
+            }
+        }
+    },
+    {
+        "id": 273507,
+        "name": "Blastoise",
+        "version": "Cosmos Holo 009/165 | MTG Back \u0026 Gold Border",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "009/165R-g",
+            "pokemon_rarity": "Holo Rare"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it",
+                    "es",
+                    "pt",
+                    "nl"
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273507/preview_blastoise-cosmos-holo-009-165-mtg-back-gold-border-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273507/blastoise-cosmos-holo-009-165-mtg-back-gold-border-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273507/show_blastoise-cosmos-holo-009-165-mtg-back-gold-border-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273507/preview_blastoise-cosmos-holo-009-165-mtg-back-gold-border-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273507/social_blastoise-cosmos-holo-009-165-mtg-back-gold-border-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": {
+            "url": "/uploads/blueprints/back_image/273507/blastoise-cosmos-holo-009-165-mtg-back-gold-border-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/back_image/273507/show_blastoise-cosmos-holo-009-165-mtg-back-gold-border-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/back_image/273507/preview_blastoise-cosmos-holo-009-165-mtg-back-gold-border-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/back_image/273507/social_blastoise-cosmos-holo-009-165-mtg-back-gold-border-wizards-of-the-coast-era-promos.jpg"
+            }
+        }
+    },
+    {
+        "id": 273508,
+        "name": "Blastoise",
+        "version": "Cosmos Holo 009/165 | White Back \u0026 Starlight Holo | Test Print Card",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "009/165R-s",
+            "pokemon_rarity": "Holo Rare"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it",
+                    "es",
+                    "pt",
+                    "nl"
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273508/preview_blastoise-cosmos-holo-009-165-white-back-starlight-holo-test-print-card-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273508/blastoise-cosmos-holo-009-165-white-back-starlight-holo-test-print-card-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273508/show_blastoise-cosmos-holo-009-165-white-back-starlight-holo-test-print-card-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273508/preview_blastoise-cosmos-holo-009-165-white-back-starlight-holo-test-print-card-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273508/social_blastoise-cosmos-holo-009-165-white-back-starlight-holo-test-print-card-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": {
+            "url": "/uploads/blueprints/back_image/273508/blastoise-cosmos-holo-009-165-white-back-starlight-holo-test-print-card-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/back_image/273508/show_blastoise-cosmos-holo-009-165-white-back-starlight-holo-test-print-card-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/back_image/273508/preview_blastoise-cosmos-holo-009-165-white-back-starlight-holo-test-print-card-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/back_image/273508/social_blastoise-cosmos-holo-009-165-white-back-starlight-holo-test-print-card-wizards-of-the-coast-era-promos.jpg"
+            }
+        }
+    },
+    {
+        "id": 273511,
+        "name": "Raichu",
+        "version": "Prerelease 14/102 | WOTC Employees-Only ©1999 Wizards",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "14/102",
+            "pokemon_rarity": "Holo Rare"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it",
+                    "es",
+                    "pt",
+                    "nl"
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273511/preview_raichu-prerelease-14-102-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273511/raichu-prerelease-14-102-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273511/show_raichu-prerelease-14-102-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273511/preview_raichu-prerelease-14-102-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273511/social_raichu-prerelease-14-102-wotc-employees-only-1999-wizards-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": null
+    },
+    {
+        "id": 273512,
+        "name": "Chansey",
+        "version": "048/093 | Sample Print",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "048/093",
+            "pokemon_rarity": "Fixed"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it"
+                ]
+            },
+            {
+                "name": "pokemon_reverse",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273512/preview_chansey-048-093-sample-print-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273512/chansey-048-093-sample-print-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273512/show_chansey-048-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273512/preview_chansey-048-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273512/social_chansey-048-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": null
+    },
+    {
+        "id": 273513,
+        "name": "Gastly",
+        "version": "048/093 | Sample Print",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "019/093",
+            "pokemon_rarity": "Fixed"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it"
+                ]
+            },
+            {
+                "name": "pokemon_reverse",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273513/preview_gastly-048-093-sample-print-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273513/gastly-048-093-sample-print-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273513/show_gastly-048-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273513/preview_gastly-048-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273513/social_gastly-048-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": null
+    },
+    {
+        "id": 273514,
+        "name": "Hoppip",
+        "version": "002/093 | Sample Print",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "002/093",
+            "pokemon_rarity": "Fixed"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it"
+                ]
+            },
+            {
+                "name": "pokemon_reverse",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273514/preview_hoppip-002-093-sample-print-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273514/hoppip-002-093-sample-print-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273514/show_hoppip-002-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273514/preview_hoppip-002-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273514/social_hoppip-002-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": null
+    },
+    {
+        "id": 273515,
+        "name": "Koffing",
+        "version": "004/093 | Sample Print",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "004/093",
+            "pokemon_rarity": "Fixed"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it"
+                ]
+            },
+            {
+                "name": "pokemon_reverse",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273515/preview_koffing-004-093-sample-print-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273515/koffing-004-093-sample-print-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273515/show_koffing-004-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273515/preview_koffing-004-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273515/social_koffing-004-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": null
+    },
+    {
+        "id": 273516,
+        "name": "Machamp",
+        "version": "088/093 | Sample Print",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "088/093",
+            "pokemon_rarity": "Fixed"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it"
+                ]
+            },
+            {
+                "name": "pokemon_reverse",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273516/preview_machamp-088-093-sample-print-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273516/machamp-088-093-sample-print-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273516/show_machamp-088-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273516/preview_machamp-088-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273516/social_machamp-088-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": null
+    },
+    {
+        "id": 273517,
+        "name": "Machoke",
+        "version": "042/093 | Sample Print",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "042/093",
+            "pokemon_rarity": "Fixed"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it"
+                ]
+            },
+            {
+                "name": "pokemon_reverse",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273517/preview_machoke-042-093-sample-print-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273517/machoke-042-093-sample-print-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273517/show_machoke-042-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273517/preview_machoke-042-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273517/social_machoke-042-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": null
+    },
+    {
+        "id": 273518,
+        "name": "Machop",
+        "version": "021/093 | Sample Print",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "021/093",
+            "pokemon_rarity": "Fixed"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it"
+                ]
+            },
+            {
+                "name": "pokemon_reverse",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273518/preview_machop-021-093-sample-print-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273518/machop-021-093-sample-print-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273518/show_machop-021-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273518/preview_machop-021-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273518/social_machop-021-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": null
+    },
+    {
+        "id": 273519,
+        "name": "Pichu",
+        "version": "083/093 | Sample Print",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "083/093",
+            "pokemon_rarity": "Fixed"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it"
+                ]
+            },
+            {
+                "name": "pokemon_reverse",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273519/preview_pichu-083-093-sample-print-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273519/pichu-083-093-sample-print-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273519/show_pichu-083-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273519/preview_pichu-083-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273519/social_pichu-083-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": null
+    },
+    {
+        "id": 273520,
+        "name": "Pikachu",
+        "version": "016/093 | Sample Print",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "016/093",
+            "pokemon_rarity": "Fixed"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it"
+                ]
+            },
+            {
+                "name": "pokemon_reverse",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273520/preview_pikachu-016-093-sample-print-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273520/pikachu-016-093-sample-print-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273520/show_pikachu-016-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273520/preview_pikachu-016-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273520/social_pikachu-016-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": null
+    },
+    {
+        "id": 273521,
+        "name": "Rapidash",
+        "version": "074/093 | Sample Print",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "074/093",
+            "pokemon_rarity": "Fixed"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "en",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it"
+                ]
+            },
+            {
+                "name": "pokemon_reverse",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/273521/preview_rapidash-074-093-sample-print-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/273521/rapidash-074-093-sample-print-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/273521/show_rapidash-074-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/273521/preview_rapidash-074-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/273521/social_rapidash-074-093-sample-print-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": null
+    },
+    {
+        "id": 310932,
+        "name": "Nidoran M",
+        "version": "Glossy 55/102 | WOTC Employees-Only",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "55/102",
+            "pokemon_rarity": "Fixed"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "de",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it"
+                ]
+            },
+            {
+                "name": "pokemon_reverse",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/310932/preview_nidoran-m-glossy-55-102-wotc-employees-only-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/310932/nidoran-m-glossy-55-102-wotc-employees-only-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/310932/show_nidoran-m-glossy-55-102-wotc-employees-only-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/310932/preview_nidoran-m-glossy-55-102-wotc-employees-only-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/310932/social_nidoran-m-glossy-55-102-wotc-employees-only-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": null
+    },
+    {
+        "id": 310933,
+        "name": "Pikachu",
+        "version": "Glossy 58/102 | WOTC Employees-Only",
+        "game_id": 5,
+        "category_id": 73,
+        "expansion_id": 1468,
+        "fixed_properties": {
+            "collector_number": "58/102",
+            "pokemon_rarity": "Fixed"
+        },
+        "editable_properties": [
+            {
+                "name": "condition",
+                "type": "string",
+                "default_value": "Near Mint",
+                "possible_values": [
+                    "Near Mint",
+                    "Slightly Played",
+                    "Moderately Played",
+                    "Played",
+                    "Poor"
+                ]
+            },
+            {
+                "name": "signed",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "altered",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            },
+            {
+                "name": "pokemon_language",
+                "type": "string",
+                "default_value": "it",
+                "possible_values": [
+                    "en",
+                    "fr",
+                    "de",
+                    "it"
+                ]
+            },
+            {
+                "name": "pokemon_reverse",
+                "type": "boolean",
+                "default_value": "false",
+                "possible_values": [
+                    true,
+                    false
+                ]
+            }
+        ],
+        "card_market_ids": [],
+        "tcg_player_id": null,
+        "scryfall_id": null,
+        "image_url": "https://cardtrader.com/uploads/blueprints/image/310933/preview_pikachu-glossy-58-102-wotc-employees-only-wizards-of-the-coast-era-promos.jpg",
+        "image": {
+            "url": "/uploads/blueprints/image/310933/pikachu-glossy-58-102-wotc-employees-only-wizards-of-the-coast-era-promos.jpg",
+            "show": {
+                "url": "/uploads/blueprints/image/310933/show_pikachu-glossy-58-102-wotc-employees-only-wizards-of-the-coast-era-promos.jpg"
+            },
+            "preview": {
+                "url": "/uploads/blueprints/image/310933/preview_pikachu-glossy-58-102-wotc-employees-only-wizards-of-the-coast-era-promos.jpg"
+            },
+            "social": {
+                "url": "/uploads/blueprints/image/310933/social_pikachu-glossy-58-102-wotc-employees-only-wizards-of-the-coast-era-promos.jpg"
+            }
+        },
+        "back_image": null
+    }
+]

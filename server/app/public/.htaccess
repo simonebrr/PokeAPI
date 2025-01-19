@@ -1,0 +1,7 @@
+# Abilita il motore di riscrittura
+RewriteEngine On
+
+# Esempio di regola per reindirizzare tutte le richieste a index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [L]
