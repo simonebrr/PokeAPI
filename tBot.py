@@ -25,7 +25,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def create_language_buttons(languages: List[str]) -> Optional[InlineKeyboardMarkup]:
-    """Create inline keyboard markup with language buttons."""
     if not languages:
         return None
     
@@ -96,9 +95,11 @@ async def look_for(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Define conditions and their corresponding prices
         CONDITION_MAPPING = {
-            "nearmint": "Nearmint Price",
-            "poor": "Poor Price",
-            "used": "Used Price"
+            "Near Mint" : "Near Mint",
+            "Slightly Played" : "Slightly Played",
+            "Moderately Played" : "Moderately Played",
+            "Played" : "Played",
+            "Poor" : "Poor"
         }
         
         # Process conditions and prices
