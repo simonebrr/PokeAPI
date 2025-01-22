@@ -10,6 +10,7 @@ if ($segments[0] === 'card') {
     require_once '../src/api/single_cards.php';
 } else if ($segments[0] === 'create-db') {
     require_once '../src/database.php';
+    require_once 'api.php';
 } else {
     echo json_encode(['error' => 'Route not found']);
 }

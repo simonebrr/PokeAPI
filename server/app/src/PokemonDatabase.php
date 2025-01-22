@@ -41,7 +41,6 @@ class PokemonDatabase {
     // Funzione per popolare la tabella delle carte singole
     public function insertSingleCard($blueprint_id, $name_en, $expansion_id, $collector_number) {
         if ($this->recordExists('single_cards', 'blueprint_id', $blueprint_id)) {
-            echo "Carta singola con blueprint_id $blueprint_id già presente nel database.\n";
             return;
         }
         $stmt = $this->pdo->prepare("INSERT INTO single_cards (blueprint_id, name_en, expansion_id, collector_number) VALUES (?, ?, ?, ?)");
@@ -51,7 +50,6 @@ class PokemonDatabase {
     // Funzione per popolare la tabella dei Pokémon
     public function insertPokemon($name) {
         if ($this->recordExists('pokemon', 'name', $name)) {
-            echo "Pokémon con ID $name già presente nel database.\n";
             return;
         }
         $stmt = $this->pdo->prepare("INSERT INTO pokemon (name) VALUES (?)");
@@ -61,7 +59,6 @@ class PokemonDatabase {
     // Funzione per popolare la relazione N:N tra Pokémon e carte singole
     public function insertPokemonSingleCardRelation($pokemon_id, $single_card_id) {
         if ($this->recordExists('pokemon_single_card', 'pokemon_id', $pokemon_id) && $this->recordExists('pokemon_single_card', 'single_card_id', $single_card_id)) {
-            echo "Relazione tra Pokémon ID $pokemon_id e Carta Singola ID $single_card_id già presente nel database.\n";
             return;
         }
         $stmt = $this->pdo->prepare("INSERT INTO pokemon_single_card (pokemon_id, single_card_id) VALUES (?, ?)");
@@ -73,6 +70,18 @@ class PokemonDatabase {
         $stmt = $this->pdo->prepare("SELECT * FROM expansions");
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getUnprocessedExpansions() {
+        $stmt = $this->pdo->prepare("SELECT * FROM expansions WHERE processed = FALSE LIMIT 100");
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function setProcessedExpansion($expansion_id) {
+        $stmt = $this->pdo->prepare("UPDATE expansions SET processed = '1' WHERE id = ?");
+        $stmt->execute([$expansion_id]);
+        echo "Espansione con ID $expansion_id marcata come processata.\n";
     }
 
     // Funzione per recuperare tutte le carte singole di una determinata espansione
