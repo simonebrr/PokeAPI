@@ -1,6 +1,6 @@
 <?php
 
-require_once '../src/PokemonDatabase.php';
+require_once '/var/www/html/src/PokemonDatabase.php';
 
 $database = new PokemonDatabase();
 
@@ -67,7 +67,7 @@ function fetch_expansion_single_cards($expansion_id, $database)
 {
     $url = 'https://api.cardtrader.com/api/v2/blueprints/export';
     $queryParams = ['expansion_id' => $expansion_id];
-    $tokenFile = 'token.txt';
+    $tokenFile = '/var/www/html/src/api/token.txt';
     $pokemons = $database->getAllPokemon();
 
     $response = fetchFromApi($url, $tokenFile, $queryParams);
@@ -95,7 +95,7 @@ function fetch_expansion_single_cards($expansion_id, $database)
     }
 }
 
-function fetch_expansions($database, &$count)
+function fetch_expansions($database)
 {
     $url = 'https://api.cardtrader.com/api/v2/expansions';
     $tokenFile = 'token.txt';
@@ -113,12 +113,8 @@ function fetch_expansions($database, &$count)
             echo ("Expansion: " . $expansion['name'] . " " . $expansion["id"] . "\n");
             $database->insertExpansion($expansion['id'], $expansion['game_id'], $expansion['code'], $expansion['name']);
             fetch_expansion_single_cards($expansion['id'], $database);
-            $count++;
         }
     } else {
         echo "Nessuna risposta valida ricevuta dall'API.\n";
     }
 }
-
-$count = 0;
-fetch_expansions($database, $count);

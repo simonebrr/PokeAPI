@@ -69,7 +69,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
 
                 $url = 'https://api.cardtrader.com/api/v2/marketplace/products';
                 $queryParams = ['blueprint_id' => $blueprint['blueprint_id']];
-                $tokenFile = 'token.txt';
+                $tokenFile = '/var/www/html/src/api/token.txt';
 
                 $response = fetchFromApi($url, $tokenFile, $queryParams);
                 //print_r($response);
