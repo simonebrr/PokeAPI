@@ -2,8 +2,6 @@
 
 require_once '/var/www/html/src/PokemonDatabase.php';
 
-$database = new PokemonDatabase();
-
 /**
  * Effettua una richiesta GET all'API con autorizzazione Bearer e restituisce la risposta come array PHP.
  *
@@ -75,7 +73,7 @@ function fetch_expansion_single_cards($expansion_id, $database)
     if ($response) {
         foreach ($response as $card) {
             if ($card['category_id'] == 73) {
-                $database->insertSingleCard($card['id'], $card['name'], $card['expansion_id'], explode(" ", $card['fixed_properties']['collector_number'])[0]);
+                $database->insertSingleCard($card['id'], $card['name'], $card['expansion_id'], $card["image_url"], explode(" ", $card['fixed_properties']['collector_number'])[0]);
 
                 if (count(array_filter($pokemons, function ($pokemon) use ($card) {
                     return $pokemon["name"] == $card['name'];
@@ -98,7 +96,7 @@ function fetch_expansion_single_cards($expansion_id, $database)
 function fetch_expansions($database)
 {
     $url = 'https://api.cardtrader.com/api/v2/expansions';
-    $tokenFile = 'token.txt';
+    $tokenFile = '/var/www/html/src/api/token.txt';
 
     $response = fetchFromApi($url, $tokenFile);
 
@@ -112,7 +110,7 @@ function fetch_expansions($database)
         foreach ($response as $expansion) {
             echo ("Expansion: " . $expansion['name'] . " " . $expansion["id"] . "\n");
             $database->insertExpansion($expansion['id'], $expansion['game_id'], $expansion['code'], $expansion['name']);
-            fetch_expansion_single_cards($expansion['id'], $database);
+            //fetch_expansion_single_cards($expansion['id'], $database);
         }
     } else {
         echo "Nessuna risposta valida ricevuta dall'API.\n";

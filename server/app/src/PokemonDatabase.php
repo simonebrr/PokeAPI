@@ -39,12 +39,12 @@ class PokemonDatabase {
     }
 
     // Funzione per popolare la tabella delle carte singole
-    public function insertSingleCard($blueprint_id, $name_en, $expansion_id, $collector_number) {
+    public function insertSingleCard($blueprint_id, $name_en, $expansion_id, $imageUrl, $collector_number) {
         if ($this->recordExists('single_cards', 'blueprint_id', $blueprint_id)) {
             return;
         }
-        $stmt = $this->pdo->prepare("INSERT INTO single_cards (blueprint_id, name_en, expansion_id, collector_number) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$blueprint_id, $name_en, $expansion_id, $collector_number]);
+        $stmt = $this->pdo->prepare("INSERT INTO single_cards (blueprint_id, name_en, expansion_id, image_url, collector_number) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$blueprint_id, $name_en, $expansion_id, $imageUrl, $collector_number]);
     }
 
     // Funzione per popolare la tabella dei Pokémon
