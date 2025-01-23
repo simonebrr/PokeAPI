@@ -168,34 +168,25 @@ async def look_for(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 response.raise_for_status()
                 data = response.json()
 
-                # Individua dinamicamente l'ID della carta
+
                 card_key = next(iter(data[1].keys()), None)
                 if not card_key or card_key not in data[1]:
-                    continue  # Passa alla prossima variazione dell'ID
-
-                # Estrazione delle lingue disponibili
+                    continue
                 available_languages = list(
                     {card["properties_hash"]["pokemon_language"] for card in data[1][card_key]}
                 )
-
-                # Creazione dei bottoni per la selezione della lingua
                 reply_markup = await create_language_buttons(available_languages, card_data)
                 if not reply_markup:
                     await update.message.reply_text("Nessuna lingua disponibile per questa carta.")
                     return
-
-                # Invia l'immagine e i bottoni per la lingua
                 await update.message.reply_photo(
                     photo="https://www.cardtrader.com"+ data[0],
                     caption=f"Carta trovata!\nNome: {name.capitalize()}\nID: {try_card_id}\n\nSeleziona la lingua:",
                     reply_markup=reply_markup
                 )
-                return  # Esce dopo aver trovato e inviato la carta
-
+                return  
             except requests.RequestException:
-                continue  # Passa alla prossima variazione dell'ID
-
-        # Se nessuna variazione dell'ID ha funzionato
+                continue  
         await update.message.reply_text("Carta non trovata con gli ID specificati.")
 
     except Exception as e:
