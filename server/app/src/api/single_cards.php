@@ -64,6 +64,9 @@ switch ($_SERVER['REQUEST_METHOD']) {
             $pokemon = $database->getPokemon($name);
             if ($pokemon) {
                 $blueprint = $database->getSingleCardsByPokemonAndCode($pokemon["id"], $code);
+            }
+            if ($blueprint) {
+                
 
                 //example: http://localhost:8080/card/?pokemon=zapdos&code=15/62
 
@@ -73,7 +76,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
 
                 $response = fetchFromApi($url, $tokenFile, $queryParams);
                 //print_r($response);
-                respond($response);
+                respond(array($blueprint["image_url"] ?? "", $response));
             } else {
                 respond(['error' => 'Pokemon not found'], 404);
             }

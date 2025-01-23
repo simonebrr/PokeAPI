@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS single_cards (
     blueprint_id INT PRIMARY KEY,
     name_en VARCHAR(255) NOT NULL,
     expansion_id INT NOT NULL,
-    image_url VARCHAR(2048) NOT NULL,
+    image_url VARCHAR(2048),
     collector_number VARCHAR(50),
     FOREIGN KEY (expansion_id) REFERENCES expansions(id) ON DELETE CASCADE
 );

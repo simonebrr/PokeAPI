@@ -66,6 +66,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         return
                     
                     data = await response.json()
+                    print(data[1])
                     price_lines = [
                         f"📍 Name: {name.capitalize()}",
                         f"🆔 ID: {card_id}",
@@ -77,8 +78,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     prices_by_condition = {}
 
                     # Ottieni l'array di listings dal primo (e unico) ID carta
-                    card_id_key = next(iter(data))
-                    listings = data[card_id_key]
+                    card_id_key = next(iter(data[1]))
+                    listings = data[1][card_id_key]
 
                     for listing in listings:
                         properties = listing.get('properties_hash', {})
@@ -154,14 +155,15 @@ async def look_for(update: Update, context: ContextTypes.DEFAULT_TYPE):
         data = response.json()
 
         # Individua dinamicamente l'ID della carta (come 119617)
-        card_key = next(iter(data.keys()), None)
-        if not card_key or card_key not in data:
+        card_key = next(iter(data[1].keys()), None)
+        print(card_key)
+        if not card_key or card_key not in data[1]:
             await update.message.reply_text("Errore: carta non trovata.")
             return
 
         # Estrazione delle lingue disponibili
         available_languages = list(
-            {card["properties_hash"]["pokemon_language"] for card in data[card_key]}
+            {card["properties_hash"]["pokemon_language"] for card in data[1][card_key]}
         )
 
         # Creazione dei bottoni per la selezione della lingua
@@ -171,15 +173,15 @@ async def look_for(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         # Invia l'immagine e i bottoni per la lingua
-        """await update.message.reply_photo(
-            photo=data[card_key][0].get("url", ""),
+        await update.message.reply_photo(
+            photo="https://www.cardtrader.com"+data[0],
             caption=f"Carta trovata!\nNome: {name}\nID: {card_id}\n\nSeleziona la lingua:",
             reply_markup=reply_markup
-        )"""
-        await update.message.reply_text(
+        )
+        """await update.message.reply_text(
             text=f"Carta trovata!\nNome: {name.capitalize()}\nID: {card_id}\n\nSeleziona la lingua:",
             reply_markup=reply_markup
-        )
+        )"""
 
     except requests.RequestException as e:
         await update.message.reply_text(f"Errore nel recupero dei dati: {str(e)}")
