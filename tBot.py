@@ -106,7 +106,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         await query.message.reply_text(price_message)
                     else:
                         await query.message.reply_text(
-                            f"No prices found for {name} in {LANGUAGES.get(selected_language, selected_language)}. "
+                            f"No prices found for {name.capitalize()} in {LANGUAGES.get(selected_language, selected_language)}. "
                             f"Available in: {', '.join(set(listing['properties_hash']['pokemon_language'] for listing in listings))}"
                         )
 
@@ -177,7 +177,7 @@ async def look_for(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=reply_markup
         )"""
         await update.message.reply_text(
-            text=f"Carta trovata!\nNome: {name}\nID: {card_id}\n\nSeleziona la lingua:",
+            text=f"Carta trovata!\nNome: {name.capitalize()}\nID: {card_id}\n\nSeleziona la lingua:",
             reply_markup=reply_markup
         )
 
