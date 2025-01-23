@@ -86,7 +86,9 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         condition = properties.get('condition')
                         language = properties.get('pokemon_language')
                         price_cents = listing.get('price_cents')
-                        
+                        price_sym = listing.get('price', {})
+                        price_sym = price_sym.get('currency_symbol')
+
                         # Controlla la lingua e la condizione
                         if language == selected_language and condition in CONDITION:
                             if price_cents is not None:
@@ -101,7 +103,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         for condition in CONDITION:
                             if condition in prices_by_condition:
                                 price_eur = prices_by_condition[condition]
-                                price_lines.append(f"• {condition}: {price_eur:.2f}€")
+                                price_lines.append(f"• {condition}: {price_eur:.2f}{price_sym}")
                         
                         price_message = "\n".join(price_lines)
                         await query.message.reply_photo(
