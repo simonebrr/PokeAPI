@@ -73,17 +73,17 @@ function fetch_expansion_single_cards($expansion_id, $database)
     if ($response) {
         foreach ($response as $card) {
             if ($card['category_id'] == 73) {
-                $database->insertSingleCard($card['id'], $card['name'], $card['expansion_id'], $card["image"]["show"]["url"], explode(" ", $card['fixed_properties']['collector_number'])[0]);
+                $database->insertSingleCard($card['id'], strtolower($card['name']), $card['expansion_id'], $card["image"]["show"]["url"], explode(" ", $card['fixed_properties']['collector_number'])[0]);
 
                 if (count(array_filter($pokemons, function ($pokemon) use ($card) {
-                    return $pokemon["name"] == $card['name'];
+                    return $pokemon["name"] == strtolower($card['name']);
                 })) == 0) {
-                    $database->insertPokemon($card['name']);
+                    $database->insertPokemon(strtolower($card['name']));
                     $pokemons = $database->getAllPokemon();
-                    $pokemon_id = array_search($card['name'], array_column($pokemons, 'name'));
+                    $pokemon_id = array_search(strtolower($card['name']), array_column($pokemons, 'name'));
                     $database->insertPokemonSingleCardRelation($pokemons[$pokemon_id]["id"], $card['id']);
                 } else {
-                    $pokemon_id = array_search($card['name'], array_column($pokemons, 'name'));
+                    $pokemon_id = array_search(strtolower($card['name']), array_column($pokemons, 'name'));
                     $database->insertPokemonSingleCardRelation($pokemons[$pokemon_id]["id"], $card['id']);
                 }
             }
