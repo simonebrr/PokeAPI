@@ -67,7 +67,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     
                     data = await response.json()
                     price_lines = [
-                        f"📍 Name: {name}",
+                        f"📍 Name: {name.capitalize()}",
                         f"🆔 ID: {card_id}",
                         f"🌐 Language: {LANGUAGES.get(selected_language, selected_language)}",
                         "\n💰 Prices:"
