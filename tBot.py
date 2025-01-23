@@ -106,11 +106,13 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         price_message = "\n".join(price_lines)
                         await query.message.reply_text(price_message)
                     else:
-                        await query.message.reply_text(
-                            f"No prices found for {name.capitalize()} in {LANGUAGES.get(selected_language, selected_language)}. "
-                            f"Available in: {', '.join(set(listing['properties_hash']['pokemon_language'] for listing in listings))}"
+                        await update.message.reply_photo(
+                            photo="https://www.cardtrader.com" + data[0],
+                            caption=(
+                                f"No prices found for {name.capitalize()} in {LANGUAGES.get(selected_language, selected_language)}. "
+                                f"Available in: {', '.join(set(listing['properties_hash']['pokemon_language'] for listing in listings))}"
+                            )
                         )
-
         except aiohttp.ClientError as e:
             await query.message.reply_text(f"Network error: {str(e)}")
         except Exception as e:
@@ -175,7 +177,7 @@ async def look_for(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Invia l'immagine e i bottoni per la lingua
         await update.message.reply_photo(
             photo="https://www.cardtrader.com"+data[0],
-            caption=f"Carta trovata!\nNome: {name}\nID: {card_id}\n\nSeleziona la lingua:",
+            caption=f"Carta trovata!\nNome: {name.capitalize()}\nID: {card_id}\n\nSeleziona la lingua:",
             reply_markup=reply_markup
         )
         """await update.message.reply_text(
