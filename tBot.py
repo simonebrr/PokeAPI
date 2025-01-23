@@ -66,7 +66,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         return
                     
                     data = await response.json()
-                    print(data[1])
+
                     price_lines = [
                         f"📍 Name: {name.capitalize()}",
                         f"🆔 ID: {card_id}",
@@ -104,9 +104,9 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                 price_lines.append(f"• {condition}: {price_eur:.2f}€")
                         
                         price_message = "\n".join(price_lines)
-                        await update.message.reply_photo(
+                        await query.message.reply_photo(
                             photo="https://www.cardtrader.com"+data[0],
-                            message =price_message
+                            caption = price_message
                         )
                         
                     else:
@@ -140,55 +140,64 @@ async def look_for(update: Update, context: ContextTypes.DEFAULT_TYPE):
         name = " ".join(context.args[:-1])
         card_id = context.args[-1]
 
-        # Verifica del formato dell'ID
-        match = re.match(r"(\d+)/(\d+)", card_id)
-        if not match:
-            await update.message.reply_text("Formato ID non valido. Usa 'numero/totale'.")
-            return
-
-        # Salva i dati della carta per la gestione callback
-        card_data = f"{name}|{card_id}"
-        context.user_data["card_data"] = card_data
-
-        # Richiesta API
-        base_url = "http://localhost:8080/card/"
-        params = {"pokemon": name, "code": card_id}
+        # Tentativi di parsing dell'ID
+        id_variations = [card_id]
         
-        response = requests.get(base_url, params=params)
-        response.raise_for_status()
-        data = response.json()
+        # Se l'ID contiene '/', prova anche senza la parte dopo '/'
+        if '/' in card_id:
+            id_variations.append(card_id.split('/')[0])
 
-        # Individua dinamicamente l'ID della carta (come 119617)
-        card_key = next(iter(data[1].keys()), None)
-        print(card_key)
-        if not card_key or card_key not in data[1]:
-            await update.message.reply_text("Errore: carta non trovata.")
-            return
+        # Prova con ogni variazione dell'ID
+        for try_card_id in id_variations:
+            # Verifica del formato dell'ID
+            match = re.match(r"^\d+(/\d+)?$", try_card_id)
+            if not match:
+                await update.message.reply_text("Formato ID non valido. Usa 'numero' o 'numero/totale'.")
+                continue
 
-        # Estrazione delle lingue disponibili
-        available_languages = list(
-            {card["properties_hash"]["pokemon_language"] for card in data[1][card_key]}
-        )
+            # Salva i dati della carta per la gestione callback
+            card_data = f"{name}|{try_card_id}"
+            context.user_data["card_data"] = card_data
 
-        # Creazione dei bottoni per la selezione della lingua
-        reply_markup = await create_language_buttons(available_languages, card_data)
-        if not reply_markup:
-            await update.message.reply_text("Nessuna lingua disponibile per questa carta.")
-            return
+            # Richiesta API
+            base_url = "http://localhost:8080/card/"
+            params = {"pokemon": name, "code": try_card_id}
+            
+            try:
+                response = requests.get(base_url, params=params)
+                response.raise_for_status()
+                data = response.json()
 
-        # Invia l'immagine e i bottoni per la lingua
-        await update.message.reply_photo(
-            photo="https://www.cardtrader.com"+data[0],
-            caption=f"Carta trovata!\nNome: {name.capitalize(0)}\nID: {card_id}\n\nSeleziona la lingua:",
-            reply_markup=reply_markup
-        )
-        """await update.message.reply_text(
-            text=f"Carta trovata!\nNome: {name.capitalize()}\nID: {card_id}\n\nSeleziona la lingua:",
-            reply_markup=reply_markup
-        )"""
+                # Individua dinamicamente l'ID della carta
+                card_key = next(iter(data[1].keys()), None)
+                if not card_key or card_key not in data[1]:
+                    continue  # Passa alla prossima variazione dell'ID
 
-    except requests.RequestException as e:
-        await update.message.reply_text(f"Errore nel recupero dei dati: {str(e)}")
+                # Estrazione delle lingue disponibili
+                available_languages = list(
+                    {card["properties_hash"]["pokemon_language"] for card in data[1][card_key]}
+                )
+
+                # Creazione dei bottoni per la selezione della lingua
+                reply_markup = await create_language_buttons(available_languages, card_data)
+                if not reply_markup:
+                    await update.message.reply_text("Nessuna lingua disponibile per questa carta.")
+                    return
+
+                # Invia l'immagine e i bottoni per la lingua
+                await update.message.reply_photo(
+                    photo="https://www.cardtrader.com"+ data[0],
+                    caption=f"Carta trovata!\nNome: {name.capitalize()}\nID: {try_card_id}\n\nSeleziona la lingua:",
+                    reply_markup=reply_markup
+                )
+                return  # Esce dopo aver trovato e inviato la carta
+
+            except requests.RequestException:
+                continue  # Passa alla prossima variazione dell'ID
+
+        # Se nessuna variazione dell'ID ha funzionato
+        await update.message.reply_text("Carta non trovata con gli ID specificati.")
+
     except Exception as e:
         await update.message.reply_text(f"Errore di ricerca: {str(e)}")
 
