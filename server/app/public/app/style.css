@@ -168,7 +168,7 @@ textarea { min-height: 70px; resize: vertical; }
 .bar-col { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; cursor: pointer; position: relative; outline: none; }
 .bar { width: 100%; max-width: 22px; background: var(--primary); border-radius: 4px 4px 0 0; opacity: .85; }
 .bar-col.on .bar, .bar-col:focus .bar { opacity: 1; }
-.bar-x { position: absolute; bottom: -18px; font-size: 10px; color: var(--muted); }
+.bar-x { position: absolute; bottom: -18px; font-size: 10px; color: var(--muted); white-space: nowrap; }
 .bars + .chart-tip, .chart-tip { position: absolute; top: 4px; background: var(--text); color: var(--bg); font-size: 12px; padding: 6px 8px; border-radius: 8px; pointer-events: none; white-space: nowrap; z-index: 2; }
 .chart-tip .pos, .chart-tip .neg { color: inherit; font-weight: 700; }
 .chart { padding-bottom: 26px; }
@@ -190,3 +190,14 @@ textarea { min-height: 70px; resize: vertical; }
 .banner.info a { color: inherit; font-weight: 700; }
 label.check { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--text); margin: 4px 0 14px; }
 label.check input { width: auto; margin-top: 2px; }
+.badge.grade { background: #1f2a44; color: #ffcb05; vertical-align: middle; }
+.photos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.photo { position: relative; aspect-ratio: 3 / 4; border-radius: 8px; overflow: hidden; background: var(--chip); }
+.photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo button { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border-radius: 50%; border: 0; background: rgba(0,0,0,.6); color: #fff; cursor: pointer; }
+.photo.add { display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; border: 2px dashed var(--border); color: var(--muted); }
+.photo.add span { font-size: 11px; margin-top: 2px; }
+.notif { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.notif:last-child { border-bottom: 0; }
+details summary { cursor: pointer; color: var(--primary); }
+a.chip { text-decoration: none; }

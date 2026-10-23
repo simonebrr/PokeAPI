@@ -134,6 +134,64 @@ function g_migrate(PDO $pdo): void
         $pdo->exec('UPDATE g_users SET email_verified_at = created_at WHERE email_verified_at IS NULL');
         g_set_schema($pdo, 3);
     }
+
+    if ($version < 4) {
+        // Storico prezzi, avvisi, quote soci, foto, carte gradate, impostazioni negozio.
+        g_add_columns($pdo, [
+            ['g_items', 'grading_company', 'VARCHAR(20) NULL'],
+            ['g_items', 'grade', 'VARCHAR(10) NULL'],
+            ['g_items', 'photos', 'TEXT NULL'],
+            ['g_items', 'alert_above', 'DECIMAL(10,2) NULL'],
+            ['g_items', 'alert_below', 'DECIMAL(10,2) NULL'],
+            ['g_workspaces', 'alert_pct', 'INT NULL'],
+            ['g_workspaces', 'price_strategy', "VARCHAR(10) NOT NULL DEFAULT 'min'"],
+            ['g_workspaces', 'auto_refresh', 'INT NOT NULL DEFAULT 1'],
+        ]);
+        $pdo->exec('UPDATE g_workspaces SET alert_pct = 20 WHERE alert_pct IS NULL');
+        $pdo->exec("CREATE TABLE IF NOT EXISTS g_price_history (
+            id $id,
+            workspace_id INT NOT NULL,
+            item_id INT NOT NULL,
+            price DECIMAL(10,2) NOT NULL,
+            source VARCHAR(20) NOT NULL,
+            recorded_at DATETIME NOT NULL
+        )");
+        try {
+            $pdo->exec('CREATE INDEX idx_ph_item ON g_price_history (item_id, recorded_at)');
+        } catch (PDOException $e) {
+            // indice già presente
+        }
+        $pdo->exec("CREATE TABLE IF NOT EXISTS g_stock_snapshots (
+            id $id,
+            workspace_id INT NOT NULL,
+            day DATE NOT NULL,
+            stock_value DECIMAL(12,2) NOT NULL,
+            cards INT NOT NULL,
+            revenue_total DECIMAL(12,2) NOT NULL,
+            spent_total DECIMAL(12,2) NOT NULL,
+            UNIQUE (workspace_id, day)
+        )");
+        $pdo->exec("CREATE TABLE IF NOT EXISTS g_notifications (
+            id $id,
+            workspace_id INT NOT NULL,
+            item_id INT NULL,
+            message VARCHAR(500) NOT NULL,
+            created_at DATETIME NOT NULL
+        )");
+        $pdo->exec("CREATE TABLE IF NOT EXISTS g_lot_shares (
+            id $id,
+            workspace_id INT NOT NULL,
+            lot_id INT NOT NULL,
+            user_id INT NOT NULL,
+            share_pct DECIMAL(5,2) NOT NULL,
+            UNIQUE (lot_id, user_id)
+        )");
+        // Il valore attuale delle carte diventa il primo punto dello storico.
+        $pdo->exec("INSERT INTO g_price_history (workspace_id, item_id, price, source, recorded_at)
+            SELECT workspace_id, id, est_value, 'manual', COALESCE(est_value_updated_at, created_at)
+            FROM g_items WHERE est_value IS NOT NULL");
+        g_set_schema($pdo, 4);
+    }
 }
 
 function g_add_columns(PDO $pdo, array $cols): void

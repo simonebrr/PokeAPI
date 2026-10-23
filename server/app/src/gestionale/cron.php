@@ -43,10 +43,72 @@ function cron_trial_reminders(): void
     cron_log("promemoria fine prova inviati: $sent");
 }
 
+// Aggiornamento notturno dei valori (negozi Premium con aggiornamento automatico attivo)
+// + email riepilogativa degli avvisi di prezzo.
+function cron_refresh_prices(): void
+{
+    $pdo = g_pdo();
+    $workspaces = $pdo->query('SELECT id, name, price_strategy FROM g_workspaces WHERE auto_refresh = 1')->fetchAll();
+    $totUpdated = 0;
+    foreach ($workspaces as $ws) {
+        $wsId = (int)$ws['id'];
+        if (!g_is_premium($wsId)) {
+            continue;
+        }
+        $stmt = $pdo->prepare("SELECT * FROM g_items WHERE workspace_id = ? AND status <> 'sold' AND blueprint_id IS NOT NULL AND grading_company IS NULL ORDER BY id");
+        $stmt->execute([$wsId]);
+        $alerts = [];
+        $updated = 0;
+        $errors = 0;
+        foreach (array_map('g_item_format', $stmt->fetchAll()) as $item) {
+            try {
+                $r = g_refresh_item($item, $ws['price_strategy']);
+                if (empty($r['skipped'])) {
+                    $updated++;
+                }
+                $alerts = array_merge($alerts, $r['alerts'] ?? []);
+            } catch (Throwable $e) {
+                $errors++;
+                if (str_contains($e->getMessage(), 'Token') || str_contains($e->getMessage(), 'raggiungibile')) {
+                    cron_log('CardTrader non disponibile: ' . $e->getMessage());
+                    return;
+                }
+            }
+            usleep(150000); // gentile con le API CardTrader
+        }
+        $totUpdated += $updated;
+        cron_log("negozio $wsId: $updated carte aggiornate, " . count($alerts) . " avvisi, $errors errori");
+        if ($alerts) {
+            $m = $pdo->prepare('SELECT name, email FROM g_users WHERE workspace_id = ?');
+            $m->execute([$wsId]);
+            foreach ($m->fetchAll() as $u) {
+                g_mail($u['email'], 'Avvisi di prezzo: ' . count($alerts) . ' carte', "Ciao {$u['name']},\n\n"
+                    . "con l'aggiornamento di stanotte:\n\n• " . implode("\n• ", array_slice($alerts, 0, 30))
+                    . (count($alerts) > 30 ? "\n…e altri " . (count($alerts) - 30) : '')
+                    . "\n\nApri il magazzino: " . g_app_url() . '/app/#items'
+                    . "\nPuoi cambiare la soglia degli avvisi da Altro → Prezzi e avvisi." . g_mail_footer());
+            }
+        }
+    }
+    cron_log("aggiornamento prezzi completato: $totUpdated carte");
+}
+
+// Fotografia giornaliera del valore del magazzino (per i grafici di andamento).
+function cron_snapshots(): void
+{
+    $ids = g_pdo()->query('SELECT id FROM g_workspaces')->fetchAll(PDO::FETCH_COLUMN);
+    foreach ($ids as $id) {
+        g_snapshot_workspace((int)$id);
+    }
+    cron_log('snapshot valore magazzino: ' . count($ids) . ' negozi');
+}
+
 // Elenco attività giornaliere (le funzioni Premium ne aggiungono altre sotto).
 function cron_tasks(): array
 {
     return [
+        'prices' => 'cron_refresh_prices',
+        'snapshots' => 'cron_snapshots',
         'trial' => 'cron_trial_reminders',
     ];
 }

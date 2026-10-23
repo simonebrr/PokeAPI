@@ -9,6 +9,11 @@ const LANGS = ['it', 'en', 'jp', 'fr', 'de', 'es', 'pt', 'kr', 'zh'];
 const CONDITIONS = ['Mint', 'Near Mint', 'Slightly Played', 'Moderately Played', 'Played', 'Poor'];
 const CHANNELS = ['Vinted', 'Cardmarket', 'CardTrader', 'eBay', 'Subito', 'Di persona', 'Fiera', 'Altro'];
 const STATUS_LABEL = { in_stock: 'In magazzino', listed: 'In vendita', sold: 'Venduta' };
+const GRADERS = ['PSA', 'BGS', 'CGC', 'ACE', 'GetGraded', 'SGC', 'Altro'];
+const photoUrl = (i, name) => `/api/items/${i.id}/photos/${encodeURIComponent(name)}`;
+const thumbOf = (i) => i.photos?.length ? photoUrl(i, i.photos[0]) : i.image_url;
+const gradeBadge = (i) => i.grading_company ? `<span class="badge grade">${esc(i.grading_company)} ${esc(i.grade || '')}</span>` : '';
+const shortDate = (d) => new Date(d.slice(0, 10) + 'T00:00:00').toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
 
 // ---------- utility ----------
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -98,8 +103,11 @@ const isPremium = () => !!state.me?.billing?.premium;
 const PREMIUM_FEATURES = [
   ['🃏', 'Carte illimitate', () => `Free: fino a ${state.me.billing.free_item_limit} carte in magazzino`],
   ['↻', 'Aggiornamento valori in blocco', () => 'Tutto il magazzino aggiornato da CardTrader in un tocco'],
-  ['👥', 'Soci', () => 'Più persone nello stesso negozio'],
-  ['📈', 'Andamento mensile', () => 'Grafico di incassi e spese mese per mese'],
+  ['👥', 'Soci e divisione profitti', () => 'Più persone nello stesso negozio, quote per ogni lotto'],
+  ['🌙', 'Valori aggiornati ogni notte', () => 'Il magazzino si aggiorna da solo con i prezzi CardTrader'],
+  ['🔔', 'Avvisi di prezzo', () => 'Email quando una carta sale o scende oltre la soglia'],
+  ['📈', 'Storico e grafici', () => 'Andamento di ogni carta, del magazzino e degli incassi mensili'],
+  ['🧾', 'Report annuale', () => 'Acquisti e vendite dell\'anno, esportabili per il commercialista'],
 ];
 
 // Finestra che spiega Premium quando si tocca una funzione bloccata.
@@ -117,12 +125,12 @@ const MONTHS = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', '
 const monthLabel = (ym) => MONTHS[+ym.slice(5, 7) - 1];
 
 // Grafico a barre (una serie) con tooltip al passaggio/tocco.
-function barChart(rows, { value, tip, fmt = (v) => v }) {
+function barChart(rows, { value, tip, fmt = (v) => v, label = (r) => monthLabel(r.month) }) {
   const max = Math.max(...rows.map(value), 0);
   const bars = rows.map((r, k) => {
     const v = value(r);
     const h = max > 0 ? Math.max(v > 0 ? 2 : 0, (v / max) * 100) : 0;
-    return `<div class="bar-col" data-k="${k}" tabindex="0"><div class="bar" style="height:${h}%"></div><div class="bar-x">${monthLabel(r.month)}</div></div>`;
+    return `<div class="bar-col" data-k="${k}" tabindex="0"><div class="bar" style="height:${h}%"></div><div class="bar-x">${esc(label(r, k))}</div></div>`;
   }).join('');
   const id = 'c' + Math.random().toString(36).slice(2, 8);
   setTimeout(() => {
@@ -236,9 +244,9 @@ function itemRow(i, { showLot = false } = {}) {
     : `<div class="big">${eur(i.est_value)}</div>${i.status === 'listed' ? '<span class="badge listed">In vendita</span>' : ''}`;
   return `
     <div class="row" data-item="${i.id}">
-      ${i.image_url ? `<img class="thumb" loading="lazy" src="${esc(i.image_url)}" alt="">` : '<div class="thumb"></div>'}
+      ${thumbOf(i) ? `<img class="thumb" loading="lazy" src="${esc(thumbOf(i))}" alt="">` : '<div class="thumb"></div>'}
       <div class="body">
-        <div class="title">${esc(i.name)}${qty}</div>
+        <div class="title">${esc(i.name)}${qty} ${gradeBadge(i)}</div>
         <div class="sub">${esc(sub || '—')}</div>
         ${showLot && i.lot_title ? `<div class="sub">📦 ${esc(i.lot_title)}</div>` : ''}
       </div>
@@ -365,6 +373,9 @@ async function viewDashboard() {
       <div class="kpi"><div class="label">Valore magazzino</div><div class="value">${eur(d.stock_value)}</div><div class="small muted">${d.cards_in_stock} carte · ${d.cards_listed} in vendita</div></div>
       <div class="kpi"><div class="label">Saldo cassa</div><div class="value">${signed(d.balance)}</div><div class="small muted">${d.cards_sold} vendute</div></div>
     </div>
+    <div id="notif"></div>
+    <h2>Valore del magazzino</h2>
+    <div id="value-hist">${isPremium() ? '<div class="small muted">Caricamento…</div>' : '<div class="card locked" id="lock-value">📊 Andamento giornaliero del valore del magazzino<br><span class="small muted">Funzione Premium · tocca per scoprire</span></div>'}</div>
     <h2>Incassi netti per mese</h2>
     ${!d.months ? '<div class="card locked" id="lock-chart">📈 Andamento mensile di incassi e spese<br><span class="small muted">Funzione Premium · tocca per scoprire</span></div>' : barChart(d.months, { value: (r) => r.revenue, fmt: eur,
       tip: (r) => `<strong>${monthLabel(r.month)} ${r.month.slice(0, 4)}</strong><br>Incassato ${eur(r.revenue)}<br>Speso ${eur(r.spent)}<br>Saldo ${signed(r.profit)}` })}
@@ -375,8 +386,24 @@ async function viewDashboard() {
     <h2>Ultime vendite</h2>
     <div class="list" id="recent">${d.recent_sales.length ? d.recent_sales.map((i) => itemRow(i)).join('') : '<div class="empty">Ancora nessuna vendita.</div>'}</div>`;
   main.querySelector('#lock-chart')?.addEventListener('click', () => premiumModal("L'andamento mensile"));
+  main.querySelector('#lock-value')?.addEventListener('click', () => premiumModal("L'andamento del valore"));
   bindItemRows(main.querySelector('#top'), d.top_items, viewDashboard);
   bindItemRows(main.querySelector('#recent'), d.recent_sales, viewDashboard);
+  api('notifications').then((n) => {
+    if (!n.length || !main.isConnected) return;
+    main.querySelector('#notif').innerHTML = `<h2>🔔 Avvisi di prezzo</h2><div class="card">${n.slice(0, 5).map((x) =>
+      `<div class="notif"><span>${esc(x.message)}</span><span class="small muted">${shortDate(x.created_at)}</span></div>`).join('')}</div>`;
+  }).catch(() => {});
+  if (isPremium()) {
+    api('stats/value-history?days=60').then((h) => {
+      const box = main.querySelector('#value-hist');
+      if (!box) return;
+      if (h.length < 2) { box.innerHTML = '<p class="small muted card">Il grafico si riempie giorno dopo giorno: il valore del magazzino viene registrato ogni notte.</p>'; return; }
+      const step = Math.ceil(h.length / 6);
+      box.innerHTML = barChart(h, { value: (r) => r.stock_value, fmt: eur, label: (r, k) => (k % step === 0 ? shortDate(r.day) : ''),
+        tip: (r) => `<strong>${fmtDate(r.day)}</strong><br>Magazzino ${eur(r.stock_value)} (${r.cards} carte)<br>Incassato totale ${eur(r.revenue_total)}<br>Speso totale ${eur(r.spent_total)}` });
+    }).catch(() => {});
+  }
 }
 
 // ---------- lotti ----------
@@ -449,12 +476,34 @@ async function viewLot(id) {
       <div class="kpi"><div class="label">Profitto realizzato</div><div class="value">${signed(l.profit)}</div></div>
     </div>
     <p class="muted small">${[fmtDate(l.purchase_date), l.source].filter(Boolean).map(esc).join(' · ')}${l.notes ? '<br>' + esc(l.notes) : ''}</p>
-    <div class="actions"><button class="btn secondary sm" id="edit-lot">Modifica lotto</button><button class="btn secondary sm" id="bulk-lot">↻ Aggiorna valori</button></div>
+    <div class="actions"><button class="btn secondary sm" id="edit-lot">Modifica lotto</button><button class="btn secondary sm" id="bulk-lot">↻ Aggiorna valori</button>${state.me.members.length > 1 ? '<button class="btn secondary sm" id="shares">👥 Quote soci</button>' : ''}</div>
     <h2>Carte (${l.cards})</h2>
     <div class="list" id="items">${l.items.length ? l.items.map((i) => itemRow(i)).join('') : '<div class="empty">Aggiungi le carte trovate nel lotto con “+ Carta”.<br>Basta segnare quelle che valgono qualcosa.</div>'}</div>`;
   main.querySelector('#edit-lot').onclick = () => lotForm(l);
   main.querySelector('#bulk-lot').onclick = () => bulkRefresh(l.items, reload);
+  main.querySelector('#shares')?.addEventListener('click', () => sharesForm(l));
   bindItemRows(main.querySelector('#items'), l.items, reload);
+}
+
+function sharesForm(l) {
+  if (!isPremium()) return premiumModal('La divisione profitti tra soci');
+  guarded(null, async () => {
+    const d = await api(`lots/${l.id}/shares`);
+    openModal('Quote soci: ' + l.title, `
+      <form>
+        <p class="small muted" style="margin-top:0">Quanto ha messo ciascuno in questo lotto. Costi, incassi e valore del lotto vengono divisi con queste percentuali.${d.custom ? '' : ' Ora: parti uguali.'}</p>
+        ${d.members.map((m) => `<div class="field"><label>${esc(m.name)} (%)</label><input name="${m.id}" inputmode="decimal" value="${Math.round((d.shares[m.id] || 0) * 100) / 100}"></div>`).join('')}
+        <p class="small" id="sum"></p>
+        <button class="btn block">Salva quote</button>
+        <button type="button" class="btn secondary block" id="equal" style="margin-top:8px">Parti uguali</button>
+      </form>`, (m) => {
+      const f = m.querySelector('form');
+      const sum = () => { const t = [...f.querySelectorAll('input')].reduce((s, x) => s + (parseFloat(x.value.replace(',', '.')) || 0), 0); m.querySelector('#sum').innerHTML = `Totale: <strong class="${Math.abs(t - 100) < 0.6 ? 'pos' : 'neg'}">${Math.round(t * 10) / 10}%</strong>`; };
+      f.addEventListener('input', sum); sum();
+      f.addEventListener('submit', (e) => { e.preventDefault(); guarded(f.querySelector('button'), async () => { await api(`lots/${l.id}/shares`, { method: 'PUT', body: { shares: formData(f) } }); closeModal(); toast('Quote salvate'); }); });
+      m.querySelector('#equal').addEventListener('click', (e) => guarded(e.target, async () => { await api(`lots/${l.id}/shares`, { method: 'PUT', body: { shares: {} } }); closeModal(); toast('Parti uguali'); }));
+    });
+  });
 }
 
 // ---------- carte ----------
@@ -467,8 +516,9 @@ async function viewItems() {
       ${[['unsold', 'Disponibili'], ['in_stock', 'In magazzino'], ['listed', 'In vendita'], ['sold', 'Vendute'], ['', 'Tutte']]
         .map(([v, t]) => `<button class="chip ${itemsFilter.status === v ? 'active' : ''}" data-status="${v}">${t}</button>`).join('')}
     </div>
-    <div class="actions" style="margin:0 0 10px"><button class="btn secondary sm" id="bulk">↻ Aggiorna valori da CardTrader</button></div>
+    <div class="actions" style="margin:0 0 10px"><button class="btn secondary sm" id="bulk">↻ Aggiorna valori da CardTrader</button><button class="btn secondary sm" id="import">⬆️ Importa CSV</button></div>
     <div id="items-list" class="list"><div class="empty">Caricamento…</div></div>`, { fab: '+ Carta' });
+  document.getElementById('import').onclick = () => importForm(loadItems);
   document.getElementById('bulk').onclick = async () => isPremium() ? bulkRefresh(await api('items?status=unsold'), loadItems) : premiumModal("L'aggiornamento valori in blocco");
   document.getElementById('fab').onclick = () => itemForm(null, {}, loadItems);
   app.querySelectorAll('[data-status]').forEach((b) => b.addEventListener('click', () => { itemsFilter.status = b.dataset.status; viewItems(); }));
@@ -493,28 +543,131 @@ async function loadItems() {
   bindItemRows(list, items, loadItems);
 }
 
+async function importForm(reload) {
+  if (!state.lots.length) state.lots = await api('lots').catch(() => []);
+  openModal('Importa carte da CSV/Excel', `
+    <p class="small muted" style="margin-top:0">Salva il foglio Excel come <strong>CSV</strong>. Prima riga = intestazioni. Colonne riconosciute:
+      <em>nome</em> (obbligatoria), set, numero, lingua, condizione, quantità, valore, costo, stato, prezzo vendita, data vendita, canale, lotto, note.
+      Va bene anche il file esportato da qui.</p>
+    <div class="field"><label>File CSV</label><input type="file" accept=".csv,text/csv,text/plain" id="csv"></div>
+    <div class="field"><label>Metti tutte le carte nel lotto</label><select id="lot"><option value="">— Usa la colonna “lotto” o carte singole —</option>${state.lots.map((l) => `<option value="${l.id}">${esc(l.title)}</option>`).join('')}</select></div>
+    <button class="btn block" id="go">Importa</button>
+    <div id="res"></div>`, (m) => {
+    m.querySelector('#go').addEventListener('click', (e) => guarded(e.target, async () => {
+      const file = m.querySelector('#csv').files[0];
+      if (!file) throw new Error('Scegli un file');
+      if (file.size > 2e6) throw new Error('File troppo grande (max 2 MB)');
+      let text = await file.text();
+      if (text.includes('�')) text = new TextDecoder('windows-1252').decode(await file.arrayBuffer()); // CSV di Excel italiano
+      const r = await api('items/import', { method: 'POST', body: { csv: text, lot_id: m.querySelector('#lot').value || null } });
+      state.lots = [];
+      m.querySelector('#res').innerHTML = `<div class="card" style="margin-top:12px"><strong>${r.imported} carte importate</strong>${r.lots_created ? `, ${r.lots_created} lotti creati` : ''}.
+        ${r.error_count ? `<p class="small neg">${r.error_count} righe saltate:</p><ul class="small">${r.errors.map((x) => `<li>Riga ${x.line}: ${esc(x.error)}</li>`).join('')}</ul>` : ''}</div>`;
+      reload();
+    }));
+  });
+}
+
 function itemDetail(i, reload) {
   const rows = [
     ['Set', i.set_name], ['Numero', i.card_number], ['Lingua', i.language?.toUpperCase()], ['Condizione', i.card_condition],
+    ['Gradazione', i.grading_company ? `${i.grading_company} ${i.grade || ''}` : null],
     ['Quantità', i.quantity], ['Valore stimato', i.est_value != null ? eur(i.est_value) + (i.quantity > 1 ? ' cad.' : '') + (i.est_value_updated_at ? ` <span class="small muted">(CardTrader ${esc(fmtDate(i.est_value_updated_at.slice(0, 10)))})</span>` : '') : null],
+    ['Avvisami', [i.alert_above != null ? `sopra ${eur(i.alert_above)}` : '', i.alert_below != null ? `sotto ${eur(i.alert_below)}` : ''].filter(Boolean).join(' · ') || null],
     ['Costo acquisto', i.purchase_cost != null ? eur(i.purchase_cost) : null], ['Stato', STATUS_LABEL[i.status]],
     ['Venduta a', i.sale_price != null ? eur(i.sale_price) : null], ['Commissioni/spedizione', i.sale_fees != null ? eur(i.sale_fees) : null],
     ['Data vendita', fmtDate(i.sale_date)], ['Canale', i.sale_channel], ['Note', i.notes],
   ].filter(([, v]) => v != null && v !== '');
+  const html = new Set(['Valore stimato', 'Costo acquisto', 'Venduta a', 'Commissioni/spedizione', 'Avvisami']);
   openModal(i.name, `
     ${i.image_url ? `<img class="hero-img" src="${esc(i.image_url)}" alt="">` : ''}
-    <div class="card">${rows.map(([k, v]) => `<div class="grid2" style="padding:4px 0"><span class="muted">${k}</span><span>${k.startsWith('Valore') || k.startsWith('Costo') || k.startsWith('Venduta') || k.startsWith('Commissioni') ? v : esc(v)}</span></div>`).join('')}</div>
+    <div class="card">${rows.map(([k, v]) => `<div class="grid2" style="padding:4px 0"><span class="muted">${k}</span><span>${html.has(k) ? v : esc(v)}</span></div>`).join('')}</div>
+    <h2>Le tue foto</h2>
+    <div class="photos">
+      ${i.photos.map((n) => `<div class="photo"><a href="${photoUrl(i, n)}" target="_blank"><img src="${photoUrl(i, n)}" alt=""></a><button type="button" data-del="${esc(n)}" aria-label="Elimina foto">×</button></div>`).join('')}
+      ${i.photos.length < 4 ? '<label class="photo add">📷<span>Aggiungi</span><input type="file" accept="image/*" capture="environment" hidden id="photo-in"></label>' : ''}
+    </div>
+    <h2>Andamento prezzo</h2>
+    <div id="hist">${isPremium() ? '<div class="small muted">Caricamento…</div>' : '<div class="card locked" id="lock-hist">📈 Storico del valore di questa carta<br><span class="small muted">Funzione Premium · tocca per scoprire</span></div>'}</div>
     <div class="actions">
       ${i.status !== 'sold' ? '<button class="btn" id="sell">💶 Segna venduta</button>' : ''}
       ${i.status === 'in_stock' ? '<button class="btn secondary" id="list">Metti in vendita</button>' : ''}
+      ${i.status !== 'sold' ? '<button class="btn secondary" id="listing">📝 Testo annuncio</button>' : ''}
       <button class="btn secondary" id="edit">Modifica</button>
-    </div>`, (m) => {
+    </div>`, async (m) => {
     m.querySelector('#sell')?.addEventListener('click', () => sellForm(i, reload));
     m.querySelector('#edit').addEventListener('click', () => itemForm(i, {}, reload));
+    m.querySelector('#listing')?.addEventListener('click', () => listingText(i));
+    m.querySelector('#lock-hist')?.addEventListener('click', () => premiumModal('Lo storico prezzi'));
     m.querySelector('#list')?.addEventListener('click', (e) => guarded(e.target, async () => {
       await api(`items/${i.id}`, { method: 'PUT', body: { status: 'listed' } });
       closeModal(); toast('Messa in vendita'); reload();
     }));
+    const reopen = (updated) => { reload(); itemDetail(updated, reload); };
+    m.querySelector('#photo-in')?.addEventListener('change', (e) => guarded(null, async () => {
+      const file = e.target.files[0];
+      if (!file) return;
+      toast('Caricamento foto…');
+      reopen(await api(`items/${i.id}/photos`, { method: 'POST', body: { data: await resizeImage(file) } }));
+    }));
+    m.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', () => guarded(b, async () => {
+      if (!confirm('Eliminare questa foto?')) return;
+      reopen(await api(`items/${i.id}/photos/${encodeURIComponent(b.dataset.del)}`, { method: 'DELETE', body: {} }));
+    })));
+    if (isPremium()) {
+      const box = m.querySelector('#hist');
+      try {
+        const h = await api(`items/${i.id}/history`);
+        if (h.length < 2) { box.innerHTML = '<p class="small muted">Lo storico si riempie con gli aggiornamenti dei prezzi (anche quello automatico notturno).</p>'; return; }
+        const first = h[0].price, last = h[h.length - 1].price;
+        box.innerHTML = `<p class="small" style="margin:0 0 6px">${eur(first)} → ${eur(last)} ${signed(last - first)} da ${fmtDate(h[0].at.slice(0, 10))}</p>`
+          + barChart(h.slice(-24), { value: (r) => r.price, fmt: eur, label: (r, k) => (k % 4 === 0 ? shortDate(r.at) : ''),
+            tip: (r) => `<strong>${fmtDate(r.at.slice(0, 10))}</strong><br>${eur(r.price)}<br><span class="small">${r.source === 'cardtrader' ? 'CardTrader' : 'Inserito a mano'}</span>` });
+      } catch (err) { box.innerHTML = `<p class="small muted">${esc(err.message)}</p>`; }
+    }
+  });
+}
+
+// Ridimensiona la foto nel browser (max 1600px, JPEG) prima dell'invio.
+function resizeImage(file, max = 1600) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * k);
+      c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(img.src);
+      resolve(c.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = () => reject(new Error('Immagine non leggibile'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+// Testo pronto da incollare su Vinted, Cardmarket, Subito…
+function listingText(i) {
+  const lang = { it: 'ITA', en: 'ENG', jp: 'JAP', fr: 'FRA', de: 'GER', es: 'ESP', pt: 'POR', kr: 'KOR', zh: 'CHI' }[i.language] || '';
+  const price = i.est_value != null ? Math.ceil(i.est_value * i.quantity) : null;
+  const title = [`Carta Pokémon ${i.name}`, i.card_number, i.set_name, lang, i.grading_company ? `${i.grading_company} ${i.grade || ''}`.trim() : i.card_condition].filter(Boolean).join(' - ');
+  const body = [
+    `${i.quantity > 1 ? i.quantity + 'x ' : ''}${i.name}${i.card_number ? ' ' + i.card_number : ''}${i.set_name ? ' (' + i.set_name + ')' : ''}`,
+    lang ? `Lingua: ${lang}` : '',
+    i.grading_company ? `Gradata ${i.grading_company} ${i.grade || ''}`.trim() : (i.card_condition ? `Condizione: ${i.card_condition}` : ''),
+    'Carta originale, foto reali.',
+    'Spedizione tracciata e protetta (sleeve + toploader + busta imbottita).',
+    price ? `Prezzo: ${price} €` : '',
+  ].filter(Boolean).join('\n');
+  openModal('Testo annuncio', `
+    <div class="field"><label>Titolo</label><input id="lt" value="${esc(title)}"></div>
+    <div class="field"><label>Descrizione</label><textarea id="lb" rows="8">${esc(body)}</textarea></div>
+    <div class="actions"><button class="btn" id="copy">📋 Copia tutto</button></div>`, (m) => {
+    m.querySelector('#copy').addEventListener('click', async () => {
+      const text = m.querySelector('#lt').value + '\n\n' + m.querySelector('#lb').value;
+      try { await navigator.clipboard.writeText(text); toast('Copiato'); }
+      catch { m.querySelector('#lb').select(); toast('Seleziona e copia il testo', true); }
+    });
   });
 }
 
@@ -570,6 +723,16 @@ async function itemForm(item, defaults, reload) {
       </div>
       <div class="actions" style="margin-top:-4px;margin-bottom:12px"><button type="button" class="btn secondary sm" id="price">🔎 Prezzo CardTrader</button><span id="price-out" class="small muted" style="align-self:center"></span></div>
       <div class="field"><label>Lotto</label><select name="lot_id"><option value="">— Carta singola (nessun lotto) —</option>${state.lots.map((l) => `<option value="${l.id}" ${i.lot_id === l.id ? 'selected' : ''}>${esc(l.title)}</option>`).join('')}</select></div>
+      <div class="grid2">
+        <div class="field"><label>Gradata da</label><select name="grading_company"><option value="">— Non gradata —</option>${opt(GRADERS, i.grading_company)}</select></div>
+        <div class="field" id="grade-field"><label>Voto</label><input name="grade" value="${esc(i.grade ?? '')}" placeholder="10"></div>
+      </div>
+      <details class="field" ${i.alert_above != null || i.alert_below != null ? 'open' : ''}><summary class="small">🔔 Avvisami quando il valore… ${isPremium() ? '' : '(Premium)'}</summary>
+        <div class="grid2" style="margin-top:8px">
+          <div class="field"><label>sale sopra (€)</label><input name="alert_above" inputmode="decimal" value="${esc(i.alert_above ?? '')}"></div>
+          <div class="field"><label>scende sotto (€)</label><input name="alert_below" inputmode="decimal" value="${esc(i.alert_below ?? '')}"></div>
+        </div>
+      </details>
       <div class="field" id="cost-field"><label>Costo d'acquisto cad. (€) – solo carte singole</label><input name="purchase_cost" inputmode="decimal" value="${esc(i.purchase_cost ?? '')}"></div>
       <div class="field"><label>Stato</label><select name="status">${opt(Object.keys(STATUS_LABEL), i.status, STATUS_LABEL)}</select></div>
       <div id="sale-fields">
@@ -598,7 +761,9 @@ async function itemForm(item, defaults, reload) {
     const sync = () => {
       m.querySelector('#sale-fields').hidden = f('status').value !== 'sold';
       m.querySelector('#cost-field').hidden = !!f('lot_id').value;
+      m.querySelector('#grade-field').style.visibility = f('grading_company').value ? 'visible' : 'hidden';
     };
+    f('grading_company').addEventListener('change', sync);
     f('status').addEventListener('change', sync);
     f('lot_id').addEventListener('change', sync);
     sync();
@@ -692,6 +857,7 @@ async function viewSales() {
   items.forEach((i) => { const c = i.sale_channel || 'Non indicato'; byChannel[c] = (byChannel[c] || 0) + (i.sale_price || 0) - (i.sale_fees || 0); });
   const main = app.querySelector('main');
   main.innerHTML = `
+    <div class="actions" style="margin:0 0 12px"><a class="btn secondary sm" href="#report">🧾 Report annuale</a>${state.me.members.length > 1 ? '<a class="btn secondary sm" href="#partners">👥 Divisione soci</a>' : ''}</div>
     <div class="kpis">
       <div class="kpi"><div class="label">Incassato lordo</div><div class="value">${eur(gross)}</div></div>
       <div class="kpi"><div class="label">Netto (− commissioni)</div><div class="value pos">${eur(gross - fees)}</div></div>
@@ -699,6 +865,43 @@ async function viewSales() {
     ${Object.keys(byChannel).length ? `<div class="chips">${Object.entries(byChannel).sort((a, b) => b[1] - a[1]).map(([c, v]) => `<span class="chip">${esc(c)}: ${eur(v)}</span>`).join('')}</div>` : ''}
     <div class="list" id="sold">${items.length ? items.map((i) => itemRow(i, { showLot: true })).join('') : '<div class="empty">Nessuna vendita registrata.</div>'}</div>`;
   bindItemRows(main.querySelector('#sold'), items, viewSales);
+}
+
+// ---------- report ----------
+async function viewReport(year) {
+  shell('Report annuale', '<div class="empty">Caricamento…</div>', { back: '#sales' });
+  if (!isPremium()) { app.querySelector('main').innerHTML = '<div class="card locked" id="lk">🧾 Report annuale di acquisti e vendite<br><span class="small muted">Funzione Premium · tocca per scoprire</span></div>'; app.querySelector('#lk').onclick = () => premiumModal('Il report annuale'); return; }
+  const d = await api('reports/annual?year=' + (year || new Date().getFullYear()));
+  const t = d.totals;
+  app.querySelector('main').innerHTML = `
+    <div class="chips">${d.years.map((y) => `<a class="chip ${y === d.year ? 'active' : ''}" href="#report/${y}">${y}</a>`).join('')}</div>
+    <div class="kpis">
+      <div class="kpi"><div class="label">Acquisti</div><div class="value">${eur(t.purchases)}</div></div>
+      <div class="kpi"><div class="label">Vendite nette</div><div class="value">${eur(t.net)}</div><div class="small muted">lordo ${eur(t.gross)} · commissioni ${eur(t.fees)}</div></div>
+      <div class="kpi wide"><div class="label">Saldo ${d.year} (vendite nette − acquisti)</div><div class="value">${signed(t.balance)}</div><div class="small muted">${t.sold} carte vendute</div></div>
+    </div>
+    <h2>Vendite nette per mese</h2>
+    ${barChart(d.months, { value: (r) => r.net, fmt: eur, tip: (r) => `<strong>${monthLabel(r.month)} ${d.year}</strong><br>Vendite nette ${eur(r.net)}<br>Acquisti ${eur(r.purchases)}<br>${r.sold} carte vendute` })}
+    ${d.channels.length ? `<h2>Per canale</h2><div class="card">${d.channels.map((c) => `<div class="grid2" style="padding:4px 0"><span>${esc(c.channel)}</span><span>${eur(c.net)}</span></div>`).join('')}</div>` : ''}
+    <div class="actions"><a class="btn" href="/api/reports/annual.csv?year=${d.year}">⬇️ Scarica report ${d.year} (Excel)</a></div>
+    <p class="small muted">Riepilogo indicativo dei movimenti registrati: per gli adempimenti fiscali fatti seguire da un commercialista.</p>`;
+}
+
+async function viewPartners() {
+  shell('Divisione soci', '<div class="empty">Caricamento…</div>', { back: '#sales' });
+  if (!isPremium()) { app.querySelector('main').innerHTML = '<div class="card locked" id="lk">👥 Quanto ha messo e quanto spetta a ogni socio<br><span class="small muted">Funzione Premium · tocca per scoprire</span></div>'; app.querySelector('#lk').onclick = () => premiumModal('La divisione profitti tra soci'); return; }
+  const rows = await api('reports/partners');
+  app.querySelector('main').innerHTML = `
+    <p class="small muted" style="margin-top:0">Lotti divisi secondo le quote (dal lotto → “Quote soci”, altrimenti parti uguali). Carte singole: di chi le ha inserite.</p>
+    <div class="list">${rows.map((r) => `
+      <div class="card">
+        <div class="title" style="font-weight:700;margin-bottom:6px">👤 ${esc(r.name)}</div>
+        <div class="grid2"><span class="muted">Ha investito</span><span>${eur(r.invested)}</span></div>
+        <div class="grid2"><span class="muted">Incassato (sua parte)</span><span>${eur(r.revenue)}</span></div>
+        <div class="grid2"><span class="muted">Magazzino (sua parte)</span><span>${eur(r.stock_value)}</span></div>
+        <div class="grid2"><span class="muted">Profitto realizzato</span><span>${signed(r.profit)}</span></div>
+        <div class="grid2"><span class="muted">Profitto potenziale</span><span>${signed(r.potential)}</span></div>
+      </div>`).join('')}</div>`;
 }
 
 // ---------- impostazioni ----------
@@ -728,7 +931,10 @@ async function viewSettings() {
           <tr><td>Carte in magazzino</td><td>${b.free_item_limit}</td><td>Illimitate</td></tr>
           <tr><td>Aggiornamento valori in blocco</td><td>—</td><td>✓</td></tr>
           <tr><td>Soci nello stesso negozio</td><td>—</td><td>✓</td></tr>
-          <tr><td>Andamento mensile</td><td>—</td><td>✓</td></tr>
+          <tr><td>Valori aggiornati ogni notte</td><td>—</td><td>✓</td></tr>
+          <tr><td>Storico prezzi e avvisi</td><td>—</td><td>✓</td></tr>
+          <tr><td>Grafici e report annuale</td><td>—</td><td>✓</td></tr>
+          <tr><td>Divisione profitti tra soci</td><td>—</td><td>✓</td></tr>
           <tr><td>Prezzo</td><td>Gratis</td><td>${eur(b.price)}/mese</td></tr>
         </table>
         <div class="actions">
@@ -737,6 +943,16 @@ async function viewSettings() {
           ${!b.stripe_enabled && b.state !== 'pro' ? '<p class="small muted">Per attivare Premium contatta il gestore del servizio.</p>' : ''}
         </div>` : ''}
     </div>
+    <h2>Prezzi e avvisi ${b.premium ? '' : '<span class="badge">Premium</span>'}</h2>
+    <form id="prefs" class="card">
+      <label class="check"><input type="checkbox" name="auto_refresh" value="1" ${workspace.auto_refresh ? 'checked' : ''}> Aggiorna i valori da CardTrader ogni notte</label>
+      <div class="grid2">
+        <div class="field"><label>Valore da usare</label><select name="price_strategy"><option value="min" ${workspace.price_strategy === 'min' ? 'selected' : ''}>Prezzo minimo</option><option value="median" ${workspace.price_strategy === 'median' ? 'selected' : ''}>Prezzo mediano</option></select></div>
+        <div class="field"><label>Avvisami se cambia più del (%)</label><input name="alert_pct" type="number" min="0" max="100" value="${workspace.alert_pct}"></div>
+      </div>
+      <p class="small muted" style="margin-top:0">0 = nessun avviso per variazione. Le soglie per singola carta si impostano da “Modifica carta”.</p>
+      <button class="btn sm">Salva</button>
+    </form>
     <h2>Il tuo negozio</h2>
     <form id="ws" class="card">
       <div class="field"><label>Nome</label><input name="name" value="${esc(workspace.name)}"></div>
@@ -789,6 +1005,8 @@ async function viewSettings() {
   const goTo = (path) => async (e) => guarded(e.target, async () => { location.href = (await api(path, { method: 'POST', body: {} })).url; });
   document.getElementById('checkout')?.addEventListener('click', goTo('billing/checkout'));
   document.getElementById('portal')?.addEventListener('click', goTo('billing/portal'));
+  const prefs = document.getElementById('prefs');
+  prefs.addEventListener('submit', (e) => { e.preventDefault(); guarded(prefs.querySelector('button'), async () => { state.me = await api('workspace/settings', { method: 'PUT', body: { auto_refresh: false, ...formData(prefs) } }); toast('Salvato'); }); });
   const ws = document.getElementById('ws');
   ws.addEventListener('submit', (e) => { e.preventDefault(); guarded(ws.querySelector('button'), async () => { state.me = await api('workspace', { method: 'PUT', body: formData(ws) }); toast('Salvato'); viewSettings(); }); });
   const join = document.getElementById('join');
@@ -887,6 +1105,8 @@ async function router() {
       case '#sales': return await viewSales();
       case '#settings': return await viewSettings();
       case '#admin': return await viewAdmin();
+      case '#report': return await viewReport(+id || null);
+      case '#partners': return await viewPartners();
       default: return await viewDashboard();
     }
   } catch (e) {

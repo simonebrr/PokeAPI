@@ -5,12 +5,13 @@
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/billing.php';
 require_once __DIR__ . '/account.php';
+require_once __DIR__ . '/premium.php';
 
 const G_STATUSES = ['in_stock', 'listed', 'sold'];
 
 function g_json($data, int $status = 200): void
 {
-    if (defined('G_CLI')) {
+    if (defined('G_CLI') || !empty($GLOBALS['g_throw'])) {
         if ($status >= 400) {
             throw new RuntimeException($data['error'] ?? "errore $status");
         }
@@ -196,9 +197,11 @@ function g_me(): void
 {
     $u = g_user();
     $pdo = g_pdo();
-    $stmt = $pdo->prepare('SELECT id, name, invite_code FROM g_workspaces WHERE id = ?');
+    $stmt = $pdo->prepare('SELECT id, name, invite_code, alert_pct, price_strategy, auto_refresh FROM g_workspaces WHERE id = ?');
     $stmt->execute([$u['workspace_id']]);
     $ws = $stmt->fetch();
+    $ws['alert_pct'] = $ws['alert_pct'] === null ? 20 : (int)$ws['alert_pct'];
+    $ws['auto_refresh'] = (int)$ws['auto_refresh'];
     $stmt = $pdo->prepare('SELECT id, name, email FROM g_users WHERE workspace_id = ? ORDER BY id');
     $stmt->execute([$u['workspace_id']]);
     $u['is_admin'] = g_is_admin($u);
@@ -330,10 +333,16 @@ function g_lot_delete(int $id): void
     $u = g_user();
     g_lot_get($u, $id);
     $pdo = g_pdo();
+    $stmt = $pdo->prepare('SELECT * FROM g_items WHERE lot_id = ? AND workspace_id = ?');
+    $stmt->execute([$id, $u['workspace_id']]);
+    $items = array_map('g_item_format', $stmt->fetchAll());
     $pdo->beginTransaction();
+    $pdo->prepare('DELETE FROM g_price_history WHERE workspace_id = ? AND item_id IN (SELECT id FROM g_items WHERE lot_id = ?)')->execute([$u['workspace_id'], $id]);
+    $pdo->prepare('DELETE FROM g_lot_shares WHERE lot_id = ? AND workspace_id = ?')->execute([$id, $u['workspace_id']]);
     $pdo->prepare('DELETE FROM g_items WHERE lot_id = ? AND workspace_id = ?')->execute([$id, $u['workspace_id']]);
     $pdo->prepare('DELETE FROM g_lots WHERE id = ? AND workspace_id = ?')->execute([$id, $u['workspace_id']]);
     $pdo->commit();
+    array_map('g_item_files_delete', $items);
     g_json(['ok' => true]);
 }
 
@@ -344,9 +353,10 @@ function g_item_format(array $i): array
     foreach (['id', 'workspace_id', 'lot_id', 'blueprint_id', 'quantity', 'created_by'] as $k) {
         $i[$k] = $i[$k] === null ? null : (int)$i[$k];
     }
-    foreach (['purchase_cost', 'est_value', 'sale_price', 'sale_fees'] as $k) {
-        $i[$k] = $i[$k] === null ? null : round((float)$i[$k], 2);
+    foreach (['purchase_cost', 'est_value', 'sale_price', 'sale_fees', 'alert_above', 'alert_below'] as $k) {
+        $i[$k] = ($i[$k] ?? null) === null ? null : round((float)$i[$k], 2);
     }
+    $i['photos'] = json_decode((string)($i['photos'] ?? ''), true) ?: [];
     return $i;
 }
 
@@ -397,7 +407,17 @@ function g_item_fields(array $u, array $b): array
         'sale_channel' => g_str($b['sale_channel'] ?? null, 80),
         'image_url' => g_str($b['image_url'] ?? null, 2048),
         'notes' => g_str($b['notes'] ?? null, 5000),
+        'grading_company' => g_str($b['grading_company'] ?? null, 20),
+        'grade' => g_str($b['grade'] ?? null, 10),
+        'alert_above' => g_money($b['alert_above'] ?? null),
+        'alert_below' => g_money($b['alert_below'] ?? null),
     ];
+    if ($f['grading_company'] && !in_array($f['grading_company'], G_GRADERS, true)) {
+        g_fail('Ente di gradazione non valido');
+    }
+    if (!$f['grading_company']) {
+        $f['grade'] = null;
+    }
     $f['image_url'] = g_ct_image($f['image_url']);
     if ($status === 'sold') {
         if ($f['sale_price'] === null) {
@@ -445,7 +465,9 @@ function g_item_create(): void
     $sql = 'INSERT INTO g_items (workspace_id, created_by, created_at, ' . implode(', ', $cols) . ') VALUES (?, ?, ?, '
         . implode(', ', array_fill(0, count($cols), '?')) . ')';
     $pdo->prepare($sql)->execute(array_merge([$u['workspace_id'], $u['id'], g_now()], array_values($f)));
-    g_json(g_item_get($u, (int)$pdo->lastInsertId()), 201);
+    $newId = (int)$pdo->lastInsertId();
+    g_record_price($u['workspace_id'], $newId, $f['est_value'], 'manual');
+    g_json(g_item_get($u, $newId), 201);
 }
 
 function g_item_update(int $id): void
@@ -463,14 +485,20 @@ function g_item_update(int $id): void
     $set = implode(', ', array_map(fn($c) => "$c = ?", array_keys($f)));
     g_pdo()->prepare("UPDATE g_items SET $set WHERE id = ? AND workspace_id = ?")
         ->execute(array_merge(array_values($f), [$id, $u['workspace_id']]));
+    if ($f['est_value'] !== $current['est_value']) {
+        g_record_price($u['workspace_id'], $id, $f['est_value'], 'manual');
+    }
     g_json(g_item_get($u, $id));
 }
 
 function g_item_delete(int $id): void
 {
     $u = g_user();
-    g_item_get($u, $id);
-    g_pdo()->prepare('DELETE FROM g_items WHERE id = ? AND workspace_id = ?')->execute([$id, $u['workspace_id']]);
+    $item = g_item_get($u, $id);
+    $pdo = g_pdo();
+    $pdo->prepare('DELETE FROM g_price_history WHERE item_id = ? AND workspace_id = ?')->execute([$id, $u['workspace_id']]);
+    $pdo->prepare('DELETE FROM g_items WHERE id = ? AND workspace_id = ?')->execute([$id, $u['workspace_id']]);
+    g_item_files_delete($item);
     g_json(['ok' => true]);
 }
 
@@ -584,6 +612,19 @@ function g_ct_image(?string $url): ?string
 }
 
 function g_ct_get(string $path, array $query): array
+{
+    static $cache = [];
+    $key = $path . '?' . http_build_query($query);
+    if (isset($cache[$key])) {
+        return $cache[$key];
+    }
+    if (count($cache) > 300) {
+        $cache = [];
+    }
+    return $cache[$key] = g_ct_fetch($path, $query);
+}
+
+function g_ct_fetch(string $path, array $query): array
 {
     $token = cardtrader_token();
     if (!$token) {
@@ -727,19 +768,8 @@ function g_item_refresh_price(int $id): void
 {
     $u = g_user();
     g_require_premium($u, "L'aggiornamento valori in blocco");
-    $item = g_item_get($u, $id);
-    if (!$item['blueprint_id']) {
-        g_json(['id' => $id, 'skipped' => 'no_catalog', 'old' => $item['est_value'], 'new' => $item['est_value']]);
-    }
     $strategy = (g_body()['strategy'] ?? 'min') === 'median' ? 'median' : 'min';
-    $p = g_ct_price($item['blueprint_id'], $item['language'], $item['card_condition'], !$item['image_url']);
-    if (!$p['count']) {
-        g_json(['id' => $id, 'skipped' => 'no_offers', 'old' => $item['est_value'], 'new' => $item['est_value']]);
-    }
-    $new = round((float)$p[$strategy], 2);
-    g_pdo()->prepare('UPDATE g_items SET est_value = ?, est_value_updated_at = ?, image_url = COALESCE(image_url, ?) WHERE id = ? AND workspace_id = ?')
-        ->execute([$new, g_now(), $p['image_url'] ?? null, $id, $u['workspace_id']]);
-    g_json(['id' => $id, 'old' => $item['est_value'], 'new' => $new, 'quantity' => $item['quantity']]);
+    g_json(g_refresh_item(g_item_get($u, $id), $strategy));
 }
 
 // ---------- Export ----------
@@ -806,6 +836,15 @@ function g_route(string $method, array $seg): void
             $parts[] = $part;
         }
         $key = $method . ' ' . implode('/', $parts);
+        // Foto: /items/:id/photos/<nome-file>
+        if (count($parts) === 4 && $parts[0] === 'items' && $parts[2] === 'photos') {
+            if ($method === 'GET') {
+                g_item_photo_get($id, $seg[3]);
+            }
+            if ($method === 'DELETE') {
+                g_item_photo_delete($id, $seg[3]);
+            }
+        }
 
         switch ($key) {
             case 'POST auth/register': g_register();
@@ -834,6 +873,17 @@ function g_route(string $method, array $seg): void
             case 'GET catalog/price': g_catalog_price();
             case 'GET export/items.csv': g_export_csv();
             case 'POST items/:id/refresh-price': g_item_refresh_price($id);
+            case 'GET items/:id/history': g_item_history($id);
+            case 'POST items/:id/photos': g_item_photo_add($id);
+            case 'POST items/import': g_items_import();
+            case 'GET stats/value-history': g_value_history();
+            case 'GET notifications': g_notifications_list();
+            case 'PUT workspace/settings': g_workspace_settings();
+            case 'GET lots/:id/shares': g_lot_shares_get($id);
+            case 'PUT lots/:id/shares': g_lot_shares_set($id);
+            case 'GET reports/partners': g_partners_report();
+            case 'GET reports/annual': g_annual_report();
+            case 'GET reports/annual.csv': g_annual_csv();
             case 'POST billing/checkout': g_billing_checkout();
             case 'POST billing/portal': g_billing_portal();
             case 'GET admin/overview': g_admin_overview();
