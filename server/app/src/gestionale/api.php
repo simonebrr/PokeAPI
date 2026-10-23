@@ -2,6 +2,10 @@
 // API JSON del gestionale: /api/...
 // Autenticazione con sessione PHP (cookie httpOnly). Ogni dato è isolato per workspace.
 
+// Gli avvisi PHP vanno nei log (docker compose logs php), mai dentro le risposte JSON.
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/billing.php';
 require_once __DIR__ . '/account.php';
@@ -650,7 +654,9 @@ function g_ct_fetch(string $path, array $query): array
     $ch = curl_init($base . $path . '?' . http_build_query($query));
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 15,
+        // Le richieste per un set intero possono essere di molti MB.
+        CURLOPT_TIMEOUT => isset($query['expansion_id']) ? 90 : 15,
+        CURLOPT_ENCODING => '', // accetta risposte compresse (gzip)
         CURLOPT_HTTPHEADER => ["Authorization: Bearer $token"],
     ]);
     $resp = curl_exec($ch);

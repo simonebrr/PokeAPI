@@ -144,6 +144,9 @@ function g_sealed_data(int $expansionId, ?string $lang): array
     if ($cached = g_cache_get($key)) {
         return $cached;
     }
+    // Un set intero può avere decine di migliaia di offerte: servono più memoria e tempo.
+    @ini_set('memory_limit', '768M');
+    @set_time_limit(180);
     $blueprints = g_ct_get('/blueprints/export', ['expansion_id' => $expansionId]);
     $market = g_ct_get('/marketplace/products', ['expansion_id' => $expansionId]);
     $setName = null;

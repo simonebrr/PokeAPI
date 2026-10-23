@@ -7,6 +7,9 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install pdo pdo_mysql \
     && a2enmod rewrite
 
+# Errori PHP nei log del container, non nelle pagine
+RUN printf "display_errors=Off\nlog_errors=On\nerror_log=/dev/stderr\nmemory_limit=256M\n" > /usr/local/etc/php/conf.d/zz-app.ini
+
 # Copia i file crontab nel contenitore
 COPY crontab /etc/cron.d/custom-cron
 
