@@ -446,7 +446,7 @@ async function itemForm(item, defaults, reload) {
       if (f('language').value && !p.language_used) notes.push(`nessuna in ${f('language').value.toUpperCase()}: tutte le lingue`);
       if (f('card_condition').value && !p.condition_used) notes.push('tutte le condizioni');
       out.innerHTML = `min ${eur(p.min)} · mediana ${eur(p.median)} (${p.count} offerte)` + (notes.length ? `<br>${esc(notes.join(', '))}` : '');
-      if (!f('est_value').value) f('est_value').value = p.min.toFixed(2);
+      f('est_value').value = p.min.toFixed(2);
     };
     m.querySelector('#price').addEventListener('click', (e) => guarded(e.target, fetchPrice));
 
