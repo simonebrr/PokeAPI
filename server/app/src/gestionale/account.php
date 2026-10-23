@@ -216,6 +216,7 @@ function g_reset_password(): void
     // Chi riceve il link ha dimostrato di possedere l'email: la consideriamo verificata.
     $pdo->prepare('UPDATE g_users SET password_hash = ?, email_verified_at = COALESCE(email_verified_at, ?) WHERE id = ?')
         ->execute([password_hash($password, PASSWORD_DEFAULT), g_now(), $uid]);
+    g_referral_reward($uid);
     $stmt = $pdo->prepare('SELECT email FROM g_users WHERE id = ?');
     $stmt->execute([$uid]);
     g_rate_clear('login', (string)$stmt->fetchColumn());
@@ -228,6 +229,7 @@ function g_verify_email(): void
 {
     $uid = g_token_use((string)(g_body()['token'] ?? ''), 'verify');
     g_pdo()->prepare('UPDATE g_users SET email_verified_at = ? WHERE id = ?')->execute([g_now(), $uid]);
+    g_referral_reward($uid);
     g_json(['ok' => true]);
 }
 
@@ -289,7 +291,7 @@ function g_delete_account(): void
 // Tabelle con dati del negozio: estesa dalle funzioni successive (storico, avvisi…).
 function g_workspace_tables(): array
 {
-    return ['g_price_history', 'g_stock_snapshots', 'g_notifications', 'g_lot_shares', 'g_items', 'g_lots'];
+    return ['g_price_history', 'g_stock_snapshots', 'g_notifications', 'g_lot_shares', 'g_events', 'g_items', 'g_lots'];
 }
 
 function g_delete_workspace_data(PDO $pdo, int $wsId): void

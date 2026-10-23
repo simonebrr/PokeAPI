@@ -6,6 +6,7 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/billing.php';
 require_once __DIR__ . '/account.php';
 require_once __DIR__ . '/premium.php';
+require_once __DIR__ . '/growth.php';
 
 const G_STATUSES = ['in_stock', 'listed', 'sold'];
 
@@ -132,6 +133,7 @@ function g_register(): void
         g_fail('Email già registrata', 409);
     }
 
+    $referrer = g_referrer_id($b['ref'] ?? null);
     $pdo->beginTransaction();
     $workspaceId = null;
     $invite = g_str($b['invite_code'] ?? null, 16);
@@ -151,14 +153,16 @@ function g_register(): void
         }
     } else {
         $pdo->prepare("INSERT INTO g_workspaces (name, invite_code, created_at, plan, trial_ends_at) VALUES (?, ?, ?, 'trial', ?)")
-            ->execute(['Negozio di ' . $name, g_invite_code(), g_now(), date('Y-m-d H:i:s', time() + g_trial_days() * 86400)]);
+            ->execute(['Negozio di ' . $name, g_invite_code(), g_now(),
+                date('Y-m-d H:i:s', time() + ($referrer ? max(g_trial_days(), G_REFERRAL_DAYS) : g_trial_days()) * 86400)]);
         $workspaceId = $pdo->lastInsertId();
     }
     $pdo->prepare('INSERT INTO g_users (workspace_id, name, email, password_hash, created_at) VALUES (?, ?, ?, ?, ?)')
         ->execute([$workspaceId, $name, $email, password_hash($password, PASSWORD_DEFAULT), g_now()]);
     $uid = (int)$pdo->lastInsertId();
-    $pdo->prepare('UPDATE g_users SET referral_code = ? WHERE id = ?')->execute([g_invite_code(), $uid]);
+    $pdo->prepare('UPDATE g_users SET referral_code = ?, referred_by = ? WHERE id = ?')->execute([g_invite_code(), $referrer, $uid]);
     $pdo->commit();
+    g_track((int)$workspaceId, $referrer ? 'signup_referral' : 'signup');
 
     g_send_verification($uid, $email, $name);
     g_send_welcome($email, $name);
@@ -181,6 +185,9 @@ function g_login(): void
     }
     g_rate_clear('login', $email);
     g_pdo()->prepare('UPDATE g_users SET last_login_at = ? WHERE id = ?')->execute([g_now(), $u['id']]);
+    $stmt = g_pdo()->prepare('SELECT workspace_id FROM g_users WHERE id = ?');
+    $stmt->execute([$u['id']]);
+    g_track((int)$stmt->fetchColumn(), 'login');
     session_regenerate_id(true);
     $_SESSION['uid'] = (int)$u['id'];
     g_me();
@@ -205,7 +212,8 @@ function g_me(): void
     $stmt = $pdo->prepare('SELECT id, name, email FROM g_users WHERE workspace_id = ? ORDER BY id');
     $stmt->execute([$u['workspace_id']]);
     $u['is_admin'] = g_is_admin($u);
-    g_json(['user' => $u, 'workspace' => $ws, 'members' => $stmt->fetchAll(), 'billing' => g_billing_info($u)]);
+    g_json(['user' => $u, 'workspace' => $ws, 'members' => $stmt->fetchAll(), 'billing' => g_billing_info($u),
+        'referral' => g_referral_info($u), 'games' => G_GAMES]);
 }
 
 function g_workspace_update(): void
@@ -408,6 +416,7 @@ function g_item_fields(array $u, array $b): array
         'image_url' => g_str($b['image_url'] ?? null, 2048),
         'notes' => g_str($b['notes'] ?? null, 5000),
         'grading_company' => g_str($b['grading_company'] ?? null, 20),
+        'game' => isset(G_GAMES[$b['game'] ?? '']) && ($b['game'] ?? '') !== 'pokemon' ? $b['game'] : null,
         'grade' => g_str($b['grade'] ?? null, 10),
         'alert_above' => g_money($b['alert_above'] ?? null),
         'alert_below' => g_money($b['alert_below'] ?? null),
@@ -467,6 +476,7 @@ function g_item_create(): void
     $pdo->prepare($sql)->execute(array_merge([$u['workspace_id'], $u['id'], g_now()], array_values($f)));
     $newId = (int)$pdo->lastInsertId();
     g_record_price($u['workspace_id'], $newId, $f['est_value'], 'manual');
+    g_track($u['workspace_id'], $f['status'] === 'sold' ? 'item_sold' : 'item_create');
     g_json(g_item_get($u, $newId), 201);
 }
 
@@ -487,6 +497,9 @@ function g_item_update(int $id): void
         ->execute(array_merge(array_values($f), [$id, $u['workspace_id']]));
     if ($f['est_value'] !== $current['est_value']) {
         g_record_price($u['workspace_id'], $id, $f['est_value'], 'manual');
+    }
+    if ($f['status'] === 'sold' && $current['status'] !== 'sold') {
+        g_track($u['workspace_id'], 'item_sold');
     }
     g_json(g_item_get($u, $id));
 }
@@ -681,12 +694,20 @@ function g_catalog_search(): void
     if (preg_match('/^(.*?)\s+(\S*\d\S*)$/u', $q, $m)) {
         $q = trim($m[1]);
         $number = $m[2];
+    } elseif (preg_match('#^\d{1,3}/\d{1,3}$#', $q)) {
+        // Solo numero (es. dalla scansione): "63/113"
+        $number = $q;
+        $q = '';
     }
     try {
         $sql = 'SELECT s.blueprint_id, s.name_en AS name, s.collector_number AS card_number, s.image_url, e.name AS set_name
                 FROM single_cards s LEFT JOIN expansions e ON e.id = s.expansion_id
-                WHERE s.name_en LIKE ?';
-        $params = ['%' . $q . '%'];
+                WHERE 1 = 1';
+        $params = [];
+        if ($q !== '') {
+            $sql .= ' AND s.name_en LIKE ?';
+            $params[] = '%' . $q . '%';
+        }
         if ($number !== null) {
             $sql .= ' AND s.collector_number LIKE ?';
             $params[] = $number . '%';
@@ -701,6 +722,17 @@ function g_catalog_search(): void
     } catch (PDOException $e) {
         g_json([]); // catalogo non ancora popolato
     }
+}
+
+// La lingua su CardTrader si chiama pokemon_language, magic_language, … a seconda del gioco.
+function g_product_language(array $props): ?string
+{
+    foreach ($props as $k => $v) {
+        if (is_string($v) && str_ends_with((string)$k, '_language')) {
+            return strtolower($v);
+        }
+    }
+    return null;
 }
 
 // Prezzo di mercato attuale: prova lingua + condizione, poi allarga i filtri.
@@ -718,7 +750,7 @@ function g_ct_price(int $bp, ?string $lang, ?string $cond, bool $withImage): arr
         $prices = [];
         foreach ($products as $p) {
             $props = $p['properties_hash'] ?? [];
-            if ($l && ($props['pokemon_language'] ?? null) !== $l) {
+            if ($l && g_product_language($props) !== $l) {
                 continue;
             }
             if ($c && ($props['condition'] ?? null) !== $c) {
@@ -769,6 +801,7 @@ function g_item_refresh_price(int $id): void
     $u = g_user();
     g_require_premium($u, "L'aggiornamento valori in blocco");
     $strategy = (g_body()['strategy'] ?? 'min') === 'median' ? 'median' : 'min';
+    g_track($u['workspace_id'], 'price_refresh');
     g_json(g_refresh_item(g_item_get($u, $id), $strategy));
 }
 
@@ -884,6 +917,8 @@ function g_route(string $method, array $seg): void
             case 'GET reports/partners': g_partners_report();
             case 'GET reports/annual': g_annual_report();
             case 'GET reports/annual.csv': g_annual_csv();
+            case 'POST events': g_event_from_client();
+            case 'GET admin/usage': g_admin_usage();
             case 'POST billing/checkout': g_billing_checkout();
             case 'POST billing/portal': g_billing_portal();
             case 'GET admin/overview': g_admin_overview();

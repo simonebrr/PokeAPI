@@ -1,9 +1,16 @@
 {
   "name": "CardLedger",
   "short_name": "CardLedger",
+  "description": "Gestionale per la compravendita di carte collezionabili",
   "start_url": "/app/",
+  "scope": "/app/",
   "display": "standalone",
-  "background_color": "#f5f6fa",
+  "background_color": "#1f2a44",
   "theme_color": "#1f2a44",
-  "lang": "it"
+  "lang": "it",
+  "icons": [
+    { "src": "/app/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/app/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/app/icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
 }

@@ -78,8 +78,8 @@ Legenda priorità: 🔴 indispensabile · 🟠 importante · 🟢 utile
 | 4.1 | **Scansione carta con fotocamera** | Riconoscimento automatico nome/numero: la funzione più richiesta, ma la più complessa | 🟠 |
 | 4.2 | **App installabile (PWA) e uso offline** | Icona sul telefono, inserimento anche senza rete alle fiere | 🟢 |
 | 4.3 | **Altri giochi** | Magic, Yu-Gi-Oh, One Piece (CardTrader li supporta già) | 🟢 |
-| 4.4 | **Prezzi da più fonti** | Cardmarket, eBay venduti, oltre a CardTrader | 🟢 |
-| 4.5 | **Piano annuale** | es. 49 €/anno (2 mesi gratis) | 🟢 |
+| 4.4 | **Prezzi da più fonti** | Rimandato: le API di Cardmarket ed eBay richiedono account sviluppatore approvati | 🟢 |
+| 4.5 | **Piano annuale** | Rimandato insieme ai pagamenti online | 🟢 |
 | 4.6 | **Programma inviti** | 1 mese Premium gratis per ogni amico che si iscrive | 🟢 |
 | 4.7 | **Statistiche d'uso** nel pannello Admin | Funzioni più usate, dove gli utenti abbandonano | 🟢 |
 

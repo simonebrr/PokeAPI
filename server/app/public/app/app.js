@@ -23,7 +23,17 @@ const today = () => new Date().toISOString().slice(0, 10);
 const fmtDate = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
 const roiBadge = (r) => r == null ? '' : `<span class="badge roi">x${r.toLocaleString('it-IT')}</span>`;
 
+const QUEUE_KEY = 'cl_offline_items';
+const readQueue = () => { try { return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]'); } catch { return []; } };
+const writeQueue = (q) => { try { localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); } catch { /* storage pieno o bloccato */ } };
+
 async function api(path, { method = 'GET', body, quiet = false } = {}) {
+  // Senza rete le nuove carte vanno in coda e si salvano al ritorno della connessione.
+  if (!navigator.onLine && method === 'POST' && path === 'items') {
+    writeQueue([...readQueue(), { body, at: Date.now() }]);
+    refreshOfflineBanner();
+    return { ...body, id: 0, offline: true, photos: [], quantity: +body.quantity || 1 };
+  }
   const res = await fetch('/api/' + path, {
     method,
     credentials: 'same-origin',
@@ -75,6 +85,7 @@ function shell(title, content, { back, fab } = {}) {
       ${back ? `<a class="back" href="${back}">‹</a>` : '<div class="logo-dot"></div>'}
       <h1>${esc(title)}</h1>
     </header>
+    ${offlineBanner()}
     ${billingBanner()}
     ${verifyBanner()}
     <main>${content}</main>
@@ -279,7 +290,8 @@ function renderAuth(mode = 'login') {
         ${mode === 'register' ? `<div class="field"><label>Nome</label><input name="name" required autocomplete="name"></div>` : ''}
         <div class="field"><label>Email</label><input name="email" type="email" required autocomplete="email"></div>
         <div class="field"><label>Password</label><input name="password" type="password" required minlength="${mode === 'register' ? 8 : 1}" autocomplete="${mode === 'register' ? 'new-password' : 'current-password'}"></div>
-        ${mode === 'register' ? `<div class="field"><label>Codice invito (opzionale, per unirti al socio)</label><input name="invite_code" autocapitalize="characters"></div>
+        ${mode === 'register' && refCode() ? `<p class="small" style="margin-top:0">🎁 Sei stato invitato: <strong>30 giorni di Premium</strong> gratis.</p><input type="hidden" name="ref" value="${esc(refCode())}">` : ''}
+        ${mode === 'register' ? `<div class="field"><label>Codice negozio del socio (opzionale)</label><input name="invite_code" autocapitalize="characters"></div>
         <label class="check"><input type="checkbox" name="accept_terms" value="1" required> Accetto i <a href="/termini.html" target="_blank">termini d'uso</a> e l'<a href="/privacy.html" target="_blank">informativa privacy</a></label>` : ''}
         <button class="btn block">${mode === 'login' ? 'Accedi' : 'Crea account'}</button>
         ${mode === 'login' ? '<p style="text-align:center;margin:14px 0 0"><a href="#" id="forgot">Password dimenticata?</a></p>' : ''}
@@ -297,6 +309,11 @@ function renderAuth(mode = 'login') {
       router();
     });
   });
+}
+
+function refCode() {
+  const r = new URLSearchParams(location.search).get('ref');
+  return r && /^[A-Za-z0-9]{4,16}$/.test(r) ? r.toUpperCase() : '';
 }
 
 function authShell(title, inner) {
@@ -357,6 +374,32 @@ function verifyBanner() {
   if (!u || u.email_verified_at) return '';
   return `<div class="banner info">📧 Conferma la tua email (${esc(u.email)}). <a href="#" id="resend-verify">Rinvia link</a></div>`;
 }
+
+function offlineBanner() {
+  const n = readQueue().length;
+  if (navigator.onLine && !n) return '';
+  return `<div class="banner ${navigator.onLine ? 'info' : 'bad'}" id="offline-banner">${navigator.onLine ? `⏳ Salvataggio di ${n} carte create offline…` : `📴 Sei offline: vedi gli ultimi dati salvati e puoi aggiungere carte${n ? ` (${n} in attesa)` : ''}.`}</div>`;
+}
+function refreshOfflineBanner() {
+  const old = document.getElementById('offline-banner');
+  const html = offlineBanner();
+  if (old) old.outerHTML = html || '';
+  else if (html) document.querySelector('.topbar')?.insertAdjacentHTML('afterend', html);
+}
+async function flushQueue() {
+  const q = readQueue();
+  if (!q.length || !navigator.onLine || !state.me) return;
+  let ok = 0;
+  const rest = [];
+  for (const job of q) {
+    try { await api('items', { method: 'POST', body: job.body }); ok++; } catch { rest.push(job); }
+  }
+  writeQueue(rest);
+  refreshOfflineBanner();
+  if (ok) { toast(`${ok} carte create offline salvate ✓`); api('events', { method: 'POST', body: { event: 'offline_sync' } }).catch(() => {}); router(); }
+}
+window.addEventListener('online', () => { refreshOfflineBanner(); flushQueue(); });
+window.addEventListener('offline', refreshOfflineBanner);
 
 // ---------- dashboard ----------
 async function viewDashboard() {
@@ -628,6 +671,60 @@ function itemDetail(i, reload) {
   });
 }
 
+// ---------- scansione carta (OCR nel browser, sperimentale) ----------
+let tesseractLoading = null;
+function loadTesseract() {
+  if (window.Tesseract) return Promise.resolve(window.Tesseract);
+  tesseractLoading ||= new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+    s.onload = () => resolve(window.Tesseract);
+    s.onerror = () => { tesseractLoading = null; reject(new Error('Scansione non disponibile: serve la connessione internet')); };
+    document.head.appendChild(s);
+  });
+  return tesseractLoading;
+}
+
+// Ritaglia una fascia della foto (valori in % dell'altezza/larghezza).
+function cropCanvas(img, x0, y0, x1, y1) {
+  const c = document.createElement('canvas');
+  const w = img.width * (x1 - x0), h = img.height * (y1 - y0);
+  const k = Math.min(2, 1400 / w);
+  c.width = Math.round(w * k); c.height = Math.round(h * k);
+  const g = c.getContext('2d');
+  g.filter = 'grayscale(1) contrast(1.4)';
+  g.drawImage(img, img.width * x0, img.height * y0, w, h, 0, 0, c.width, c.height);
+  return c;
+}
+
+// Legge nome (in alto) e numero (in basso, es. 63/113) da una foto della carta.
+async function scanCard(file, progress) {
+  api('events', { method: 'POST', body: { event: 'scan' } }).catch(() => {});
+  progress('Carico il motore di lettura (solo la prima volta)…');
+  const T = await loadTesseract();
+  const img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error('Foto non leggibile')); im.src = URL.createObjectURL(file); });
+  progress('Leggo la carta…');
+  const worker = await T.createWorker('eng');
+  try {
+    const top = (await worker.recognize(cropCanvas(img, 0.04, 0.02, 0.78, 0.12))).data.text;
+    const bottom = (await worker.recognize(cropCanvas(img, 0, 0.84, 1, 0.99))).data.text;
+    const r = parseScan(top, bottom);
+    if (r.name || r.number) api('events', { method: 'POST', body: { event: 'scan_ok' } }).catch(() => {});
+    return r;
+  } finally {
+    worker.terminate();
+    URL.revokeObjectURL(img.src);
+  }
+}
+
+function parseScan(top, bottom) {
+  const num = (bottom.replace(/[Oo]/g, '0').match(/(\d{1,3})\s*\/\s*(\d{1,3})/) || [])[0]?.replace(/\s/g, '') || '';
+  const skip = /^(basic|base|stage|stadio|level|livello|hp|ps|v|vmax|vstar|ex|gx|trainer|allenatore|energy|energia|pokemon|pokémon|evolves|evolve)$/i;
+  const name = (top.split('\n').map((l) => l.replace(/[^A-Za-zÀ-ÿ'\- ]/g, ' ').trim()).find((l) => l.length >= 3) || '')
+    .split(/\s+/).filter((w) => w.length > 1 && !skip.test(w)).slice(0, 3).join(' ');
+  return { name, number: num };
+}
+
 // Ridimensiona la foto nel browser (max 1600px, JPEG) prima dell'invio.
 function resizeImage(file, max = 1600) {
   return new Promise((resolve, reject) => {
@@ -648,6 +745,7 @@ function resizeImage(file, max = 1600) {
 
 // Testo pronto da incollare su Vinted, Cardmarket, Subito…
 function listingText(i) {
+  api('events', { method: 'POST', body: { event: 'listing_text' } }).catch(() => {});
   const lang = { it: 'ITA', en: 'ENG', jp: 'JAP', fr: 'FRA', de: 'GER', es: 'ESP', pt: 'POR', kr: 'KOR', zh: 'CHI' }[i.language] || '';
   const price = i.est_value != null ? Math.ceil(i.est_value * i.quantity) : null;
   const title = [`Carta Pokémon ${i.name}`, i.card_number, i.set_name, lang, i.grading_company ? `${i.grading_company} ${i.grade || ''}`.trim() : i.card_condition].filter(Boolean).join(' - ');
@@ -703,8 +801,10 @@ async function itemForm(item, defaults, reload) {
   const opt = (list, cur, labels) => list.map((v) => `<option value="${esc(v)}" ${String(cur ?? '') === String(v) ? 'selected' : ''}>${esc(labels ? labels[v] : v)}</option>`).join('');
   openModal(item ? 'Modifica carta' : 'Aggiungi carta', `
     <form>
+      <div class="field"><label>Gioco</label><select name="game">${Object.entries(state.me.games || { pokemon: 'Pokémon' }).map(([k, v]) => `<option value="${k}" ${(i.game || 'pokemon') === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></div>
       <div class="field"><label>Cerca nel catalogo (es. “ditto 63/113”) o incolla il link CardTrader</label>
-        <input id="cat-q" type="search" placeholder="Cerca…" autocomplete="off"><div id="cat-res"></div></div>
+        <div class="search-row"><input id="cat-q" type="search" placeholder="Cerca…" autocomplete="off"><label class="btn secondary scan-btn" title="Scansiona la carta">📷<input type="file" accept="image/*" capture="environment" hidden id="scan-in"></label></div>
+        <div id="scan-out" class="small muted"></div><div id="cat-res"></div></div>
       <input type="hidden" name="blueprint_id" value="${esc(i.blueprint_id ?? '')}">
       <input type="hidden" name="image_url" value="${esc(i.image_url ?? '')}">
       <img id="img-preview" class="hero-img" alt="" ${i.image_url ? `src="${esc(i.image_url)}"` : 'hidden'}>
@@ -824,6 +924,22 @@ async function itemForm(item, defaults, reload) {
       f('est_value').value = p.min.toFixed(2);
     };
     m.querySelector('#price').addEventListener('click', (e) => guarded(e.target, fetchPrice));
+    m.querySelector('#scan-in').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const out = m.querySelector('#scan-out');
+      const q = m.querySelector('#cat-q');
+      try {
+        const r = await scanCard(file, (msg) => (out.textContent = msg));
+        if (!r.name && !r.number) { out.textContent = 'Non sono riuscito a leggere la carta: prova con più luce, carta dritta e inquadrata tutta.'; return; }
+        out.textContent = `Letto: ${[r.name, r.number].filter(Boolean).join(' · ')}`;
+        if (!f('name').value && r.name) f('name').value = r.name;
+        if (!f('card_number').value && r.number) f('card_number').value = r.number;
+        q.value = [r.name, r.number].filter(Boolean).join(' ');
+        q.dispatchEvent(new Event('input'));
+      } catch (err) { out.textContent = err.message; }
+      e.target.value = '';
+    });
 
     form.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -953,6 +1069,14 @@ async function viewSettings() {
       <p class="small muted" style="margin-top:0">0 = nessun avviso per variazione. Le soglie per singola carta si impostano da “Modifica carta”.</p>
       <button class="btn sm">Salva</button>
     </form>
+    <h2>🎁 Invita amici</h2>
+    <div class="card">
+      <p style="margin-top:0">Per ogni amico che si iscrive con il tuo link e conferma l'email ricevi <strong>${state.me.referral.days} giorni di Premium</strong>. Lui parte con ${state.me.referral.days} giorni di prova.</p>
+      <input readonly value="${esc(state.me.referral.link)}" id="ref-link" onclick="this.select()">
+      <div class="actions"><button class="btn sm" id="ref-share">Condividi link</button></div>
+      <p class="small muted" style="margin-bottom:0">Invitati: ${state.me.referral.invited} · confermati: ${state.me.referral.confirmed}</p>
+    </div>
+    ${deferredInstall ? '<h2>📱 App</h2><button class="btn secondary" id="install">Installa CardLedger sul telefono</button>' : ''}
     <h2>Il tuo negozio</h2>
     <form id="ws" class="card">
       <div class="field"><label>Nome</label><input name="name" value="${esc(workspace.name)}"></div>
@@ -999,12 +1123,24 @@ async function viewSettings() {
     f.addEventListener('submit', (e) => {
       e.preventDefault();
       if (!confirm('Sei sicuro? L\'operazione non si può annullare.')) return;
-      guarded(f.querySelector('button'), async () => { await api('account', { method: 'DELETE', body: formData(f) }); state.me = null; closeModal(); history.replaceState(null, '', '#'); renderAuth(); toast('Account eliminato'); });
+      guarded(f.querySelector('button'), async () => { await api('account', { method: 'DELETE', body: formData(f) }); clearOfflineData(); state.me = null; closeModal(); history.replaceState(null, '', '#'); renderAuth(); toast('Account eliminato'); });
     });
   });
   const goTo = (path) => async (e) => guarded(e.target, async () => { location.href = (await api(path, { method: 'POST', body: {} })).url; });
   document.getElementById('checkout')?.addEventListener('click', goTo('billing/checkout'));
   document.getElementById('portal')?.addEventListener('click', goTo('billing/portal'));
+  document.getElementById('ref-share').onclick = async () => {
+    const link = state.me.referral.link;
+    const text = 'Uso CardLedger per segnare lotti, carte e profitti: iscriviti con il mio link e hai 30 giorni di Premium gratis';
+    if (navigator.share) { try { await navigator.share({ title: 'CardLedger', text, url: link }); } catch { /* annullato */ } return; }
+    try { await navigator.clipboard.writeText(link); toast('Link copiato'); } catch { document.getElementById('ref-link').select(); }
+  };
+  document.getElementById('install')?.addEventListener('click', async () => {
+    deferredInstall.prompt();
+    await deferredInstall.userChoice;
+    deferredInstall = null;
+    viewSettings();
+  });
   const prefs = document.getElementById('prefs');
   prefs.addEventListener('submit', (e) => { e.preventDefault(); guarded(prefs.querySelector('button'), async () => { state.me = await api('workspace/settings', { method: 'PUT', body: { auto_refresh: false, ...formData(prefs) } }); toast('Salvato'); }); });
   const ws = document.getElementById('ws');
@@ -1015,7 +1151,7 @@ async function viewSettings() {
     if (!confirm('Passerai al negozio del codice inserito. Continuare?')) return;
     guarded(join.querySelector('button'), async () => { state.me = await api('workspace/join', { method: 'POST', body: formData(join) }); state.lots = []; toast('Ti sei unito a ' + state.me.workspace.name); viewSettings(); });
   });
-  document.getElementById('logout').onclick = (e) => guarded(e.target, async () => { await api('auth/logout', { method: 'POST', body: {} }); state.me = null; state.lots = []; renderAuth(); });
+  document.getElementById('logout').onclick = (e) => guarded(e.target, async () => { await api('auth/logout', { method: 'POST', body: {} }); clearOfflineData(); state.me = null; state.lots = []; renderAuth(); });
 }
 
 // ---------- pannello proprietario ----------
@@ -1057,6 +1193,17 @@ function renderAdmin(d) {
         <div class="right"><span class="badge st-${r.state}">${STATE_LABEL[r.state]}</span>
           <div class="small muted" style="margin-top:4px">${r.state === 'pro' || r.state === 'trial' ? `${r.days_left} gg` : ''}</div></div>
       </div>`).join('') : '<div class="empty">Nessun negozio.</div>'}</div>`;
+  main.insertAdjacentHTML('beforeend', '<h2>Uso dell\'app (30 giorni)</h2><div id="usage"><div class="small muted">Caricamento…</div></div>');
+  api('admin/usage').then((u) => {
+    const max = Math.max(...u.funnel.map((f) => f.value), 1);
+    const EV = { login: 'Accessi', signup: 'Iscrizioni', signup_referral: 'Iscrizioni da invito', referral_reward: 'Inviti premiati', item_create: 'Carte aggiunte', item_sold: 'Vendite registrate',
+      price_refresh: 'Aggiornamenti prezzo', import: 'Import CSV', photo_add: 'Foto caricate', report_view: 'Report aperti', shares_set: 'Quote soci', scan: 'Scansioni', scan_ok: 'Scansioni riuscite',
+      listing_text: 'Testi annuncio', app_installed: 'App installate', offline_sync: 'Sincronizzazioni offline' };
+    main.querySelector('#usage').innerHTML = `
+      <div class="card">${u.funnel.map((f) => `<div class="funnel"><span>${esc(f.step)}</span><div class="fbar"><div style="width:${(f.value / max) * 100}%"></div></div><strong>${f.value}</strong></div>`).join('')}</div>
+      <div class="card" style="margin-top:10px">${u.events.length ? u.events.map((e) => `<div class="grid2" style="padding:3px 0"><span>${esc(EV[e.event] || e.event)}</span><span>${e.count} <span class="small muted">(${e.shops} negozi)</span></span></div>`).join('') : '<span class="muted">Nessun evento ancora.</span>'}</div>
+      <p class="small muted">Utenti arrivati da invito: ${u.referred_users} · Carte per gioco: ${u.games.map((g) => `${esc(g.game)} ${g.cards}`).join(', ') || '—'}</p>`;
+  }).catch(() => {});
   main.querySelectorAll('[data-f]').forEach((b) => b.addEventListener('click', () => { adminFilter = b.dataset.f; renderAdmin(d); }));
   main.querySelectorAll('[data-ws]').forEach((el) => el.addEventListener('click', () => adminWorkspace(d.rows.find((r) => r.id === +el.dataset.ws))));
 }
@@ -1123,8 +1270,18 @@ document.addEventListener('error', (e) => {
   img.classList.add('broken');
 }, true);
 
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredInstall = e; });
+window.addEventListener('appinstalled', () => { api('events', { method: 'POST', body: { event: 'app_installed' } }).catch(() => {}); });
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/app/sw.js', { scope: '/app/' }).catch(() => {});
+function clearOfflineData() {
+  writeQueue([]);
+  navigator.serviceWorker?.controller?.postMessage('clear-data');
+}
+
 window.addEventListener('hashchange', router);
 (async () => {
   try { state.me = await api('me', { quiet: true }); } catch { state.me = null; }
   router();
+  flushQueue();
 })();

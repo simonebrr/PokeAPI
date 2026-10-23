@@ -210,6 +210,7 @@ function g_lot_shares_set(int $lotId): void
         $pdo->prepare('INSERT INTO g_lot_shares (workspace_id, lot_id, user_id, share_pct) VALUES (?, ?, ?, ?)')
             ->execute([$u['workspace_id'], $lotId, $uid, $pct]);
     }
+    g_track($u['workspace_id'], 'shares_set');
     g_lot_shares_get($lotId);
 }
 
@@ -399,6 +400,7 @@ function g_items_import(): void
     }
     $GLOBALS['g_throw'] = false;
     $pdo->commit();
+    g_track($u['workspace_id'], 'import');
     g_json(['imported' => $imported, 'lots_created' => $lotsCreated, 'errors' => array_slice($errors, 0, 50), 'error_count' => count($errors)]);
 }
 
@@ -448,6 +450,7 @@ function g_item_photo_add(int $id): void
     $photos = array_merge($item['photos'], [$name]);
     g_pdo()->prepare('UPDATE g_items SET photos = ? WHERE id = ? AND workspace_id = ?')
         ->execute([json_encode($photos), $id, $u['workspace_id']]);
+    g_track($u['workspace_id'], 'photo_add');
     g_json(g_item_get($u, $id), 201);
 }
 
@@ -582,6 +585,7 @@ function g_annual_report(): void
     $u = g_user();
     g_require_premium($u, 'Il report annuale');
     $year = (int)($_GET['year'] ?? date('Y'));
+    g_track($u['workspace_id'], 'report_view');
     g_json(g_annual_data($u['workspace_id'], $year) + ['years' => g_annual_years($u['workspace_id'])]);
 }
 

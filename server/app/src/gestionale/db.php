@@ -192,6 +192,30 @@ function g_migrate(PDO $pdo): void
             FROM g_items WHERE est_value IS NOT NULL");
         g_set_schema($pdo, 4);
     }
+
+    if ($version < 5) {
+        // Altri giochi, premi inviti, statistiche d'uso.
+        g_add_columns($pdo, [
+            ['g_items', 'game', 'VARCHAR(20) NULL'],
+            ['g_users', 'referral_rewarded_at', 'DATETIME NULL'],
+        ]);
+        $pdo->exec("CREATE TABLE IF NOT EXISTS g_events (
+            id $id,
+            workspace_id INT NOT NULL,
+            event VARCHAR(40) NOT NULL,
+            created_at DATETIME NOT NULL
+        )");
+        try {
+            $pdo->exec('CREATE INDEX idx_ev_time ON g_events (created_at, event)');
+        } catch (PDOException $e) {
+            // indice già presente
+        }
+        // Codice invito personale anche per gli utenti registrati prima.
+        foreach ($pdo->query('SELECT id FROM g_users WHERE referral_code IS NULL')->fetchAll(PDO::FETCH_COLUMN) as $uid) {
+            $pdo->prepare('UPDATE g_users SET referral_code = ? WHERE id = ?')->execute([g_invite_code(), $uid]);
+        }
+        g_set_schema($pdo, 5);
+    }
 }
 
 function g_add_columns(PDO $pdo, array $cols): void

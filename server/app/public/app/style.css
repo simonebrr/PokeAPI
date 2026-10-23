@@ -201,3 +201,10 @@ label.check input { width: auto; margin-top: 2px; }
 .notif:last-child { border-bottom: 0; }
 details summary { cursor: pointer; color: var(--primary); }
 a.chip { text-decoration: none; }
+.search-row { display: flex; gap: 8px; }
+.search-row input { flex: 1; }
+.scan-btn { padding: 0 14px; font-size: 20px; }
+.funnel { display: grid; grid-template-columns: 1fr 90px 30px; gap: 8px; align-items: center; padding: 4px 0; font-size: 14px; }
+.fbar { height: 8px; background: var(--chip); border-radius: 999px; overflow: hidden; }
+.fbar div { height: 100%; background: var(--primary); }
+.funnel strong { text-align: right; }
