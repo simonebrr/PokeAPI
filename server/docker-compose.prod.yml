@@ -1,0 +1,40 @@
+# Produzione: docker compose -f docker-compose.yaml -f docker-compose.prod.yml up -d --build
+# (oppure semplicemente ./scripts/deploy.sh)
+# - HTTPS automatico con Caddy (imposta DOMAIN nel file .env)
+# - database e phpMyAdmin NON raggiungibili da internet
+
+services:
+  php:
+    ports: !reset []
+    restart: unless-stopped
+
+  db:
+    ports: !reset []
+    restart: unless-stopped
+
+  phpmyadmin:
+    # Avvialo solo quando serve: docker compose --profile tools up -d phpmyadmin
+    profiles: ["tools"]
+    ports: !reset ["127.0.0.1:8081:80"]
+
+  caddy:
+    image: caddy:2
+    container_name: caddy
+    restart: unless-stopped
+    depends_on:
+      - php
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN:-:80}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - my_network
+
+volumes:
+  caddy_data:
+  caddy_config:
