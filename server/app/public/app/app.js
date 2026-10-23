@@ -28,6 +28,8 @@ const readQueue = () => { try { return JSON.parse(localStorage.getItem(QUEUE_KEY
 const writeQueue = (q) => { try { localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); } catch { /* storage pieno o bloccato */ } };
 
 async function api(path, { method = 'GET', body, quiet = false } = {}) {
+  // Il server accetta scritture solo in JSON (protezione CSRF): corpo vuoto se non indicato.
+  if (method !== 'GET' && body === undefined) body = {};
   // Senza rete le nuove carte vanno in coda e si salvano al ritorno della connessione.
   if (!navigator.onLine && method === 'POST' && path === 'items') {
     writeQueue([...readQueue(), { body, at: Date.now() }]);
@@ -565,7 +567,7 @@ async function viewItems() {
       ${[['unsold', 'Disponibili'], ['in_stock', 'In magazzino'], ['listed', 'In vendita'], ['sold', 'Vendute'], ['', 'Tutte']]
         .map(([v, t]) => `<button class="chip ${itemsFilter.status === v ? 'active' : ''}" data-status="${v}">${t}</button>`).join('')}
     </div>
-    <div class="actions" style="margin:0 0 10px"><button class="btn secondary sm" id="bulk">↻ Aggiorna valori da CardTrader</button><button class="btn secondary sm" id="import">⬆️ Importa CSV</button><a class="btn secondary sm" href="#sealed">🎁 Sbusto o rivendo?</a></div>
+    <div class="actions" style="margin:0 0 10px"><button class="btn secondary sm" id="bulk">↻ Aggiorna valori da CardTrader</button><button class="btn secondary sm" id="import">⬆️ Importa CSV</button><a class="btn secondary sm" href="#sealed">🎁 Sbusto o rivendo?</a><a class="btn secondary sm" href="#opening">📦 Registra sbustamento</a></div>
     <div id="items-list" class="list"><div class="empty">Caricamento…</div></div>`, { fab: '+ Carta' });
   document.getElementById('import').onclick = () => importForm(loadItems);
   document.getElementById('bulk').onclick = async () => isPremium() ? bulkRefresh(await api('items?status=unsold'), loadItems) : premiumModal("L'aggiornamento valori in blocco");
