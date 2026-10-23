@@ -26,6 +26,7 @@ docker compose up --build
 | Storico e avvisi | storico prezzo per carta, valore magazzino giornaliero, avvisi email | Premium |
 | Soci | più utenti nello stesso negozio, quote per lotto, resoconto per socio | Premium |
 | Report | grafici mensili, report annuale esportabile | Premium |
+| Sbusto o rivendo? | per bustine, ETB, box: valore atteso per bustina, pull rate per rarità, simulazione di 3000 sbustamenti (probabilità di rientrare), verdetto e prezzo consigliato di rivendita | Premium |
 | Inviti | 30 giorni di Premium per ogni amico che conferma l'email (max 12) | tutti |
 | Offline | consultazione ultimi dati, carte create offline salvate al ritorno della rete | tutti |
 
@@ -34,6 +35,11 @@ Nuovi negozi: `TRIAL_DAYS` (14) giorni di Premium in prova (30 se invitati), poi
 ## Pannello proprietario (tab 👑 Admin)
 Visibile agli utenti in `ADMIN_EMAILS` (o al primo registrato). Mostra entrate mensili, negozi per piano,
 conversione, nuovi utenti, imbuto di attivazione, uso delle funzioni; permette di attivare Premium a mano.
+
+## Pull rate (Sbusto o rivendo?)
+Valori di default indicativi della community (ere Scarlatto e Violetto, Spada e Scudo), in `src/gestionale/sealed.php`.
+Il proprietario li può correggere set per set direttamente dalla pagina (tabella "Pull rate per rarità").
+Le rarità senza pull rate non vengono conteggiate e sono elencate sotto la tabella. Dati CardTrader in cache 6 ore.
 
 ## Pagamenti
 ### PayPal (consigliato per iniziare)

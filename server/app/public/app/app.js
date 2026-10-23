@@ -118,6 +118,7 @@ const PREMIUM_FEATURES = [
   ['🌙', 'Valori aggiornati ogni notte', () => 'Il magazzino si aggiorna da solo con i prezzi CardTrader'],
   ['🔔', 'Avvisi di prezzo', () => 'Email quando una carta sale o scende oltre la soglia'],
   ['📈', 'Storico e grafici', () => 'Andamento di ogni carta, del magazzino e degli incassi mensili'],
+  ['🎁', 'Sbusto o rivendo?', () => 'Valore atteso di bustine, ETB e box, pull rate e prezzo consigliato'],
   ['🧾', 'Report annuale', () => 'Acquisti e vendite dell\'anno, esportabili per il commercialista'],
 ];
 
@@ -467,7 +468,7 @@ async function viewLots() {
   document.getElementById('fab').onclick = () => lotForm();
   state.lots = await api('lots');
   app.querySelector('main').innerHTML = state.lots.length
-    ? `<div class="list">${state.lots.map(lotRow).join('')}</div>`
+    ? `<div class="actions" style="margin:0 0 10px"><a class="btn secondary sm" href="#sealed">🎁 Bustine/ETB: sbusto o rivendo?</a></div><div class="list">${state.lots.map(lotRow).join('')}</div>`
     : '<div class="empty">Nessun lotto ancora.<br>Un lotto è un acquisto in blocco (es. 100 carte a 10 €).</div>';
 }
 
@@ -559,7 +560,7 @@ async function viewItems() {
       ${[['unsold', 'Disponibili'], ['in_stock', 'In magazzino'], ['listed', 'In vendita'], ['sold', 'Vendute'], ['', 'Tutte']]
         .map(([v, t]) => `<button class="chip ${itemsFilter.status === v ? 'active' : ''}" data-status="${v}">${t}</button>`).join('')}
     </div>
-    <div class="actions" style="margin:0 0 10px"><button class="btn secondary sm" id="bulk">↻ Aggiorna valori da CardTrader</button><button class="btn secondary sm" id="import">⬆️ Importa CSV</button></div>
+    <div class="actions" style="margin:0 0 10px"><button class="btn secondary sm" id="bulk">↻ Aggiorna valori da CardTrader</button><button class="btn secondary sm" id="import">⬆️ Importa CSV</button><a class="btn secondary sm" href="#sealed">🎁 Sbusto o rivendo?</a></div>
     <div id="items-list" class="list"><div class="empty">Caricamento…</div></div>`, { fab: '+ Carta' });
   document.getElementById('import').onclick = () => importForm(loadItems);
   document.getElementById('bulk').onclick = async () => isPremium() ? bulkRefresh(await api('items?status=unsold'), loadItems) : premiumModal("L'aggiornamento valori in blocco");
@@ -636,11 +637,18 @@ function itemDetail(i, reload) {
       ${i.status !== 'sold' ? '<button class="btn" id="sell">💶 Segna venduta</button>' : ''}
       ${i.status === 'in_stock' ? '<button class="btn secondary" id="list">Metti in vendita</button>' : ''}
       ${i.status !== 'sold' ? '<button class="btn secondary" id="listing">📝 Testo annuncio</button>' : ''}
+      ${i.status !== 'sold' && i.blueprint_id && isSealedName(i.name) ? '<button class="btn secondary" id="sealed">🎁 Sbusto o rivendo?</button>' : ''}
       <button class="btn secondary" id="edit">Modifica</button>
     </div>`, async (m) => {
     m.querySelector('#sell')?.addEventListener('click', () => sellForm(i, reload));
     m.querySelector('#edit').addEventListener('click', () => itemForm(i, {}, reload));
     m.querySelector('#listing')?.addEventListener('click', () => listingText(i));
+    m.querySelector('#sealed')?.addEventListener('click', () => {
+      sealedState.paid = i.purchase_cost != null ? String(i.purchase_cost * i.quantity) : '';
+      if (i.language) sealedState.lang = i.language;
+      closeModal();
+      location.hash = `#sealed/${i.blueprint_id}`;
+    });
     m.querySelector('#lock-hist')?.addEventListener('click', () => premiumModal('Lo storico prezzi'));
     m.querySelector('#list')?.addEventListener('click', (e) => guarded(e.target, async () => {
       await api(`items/${i.id}`, { method: 'PUT', body: { status: 'listed' } });
@@ -983,6 +991,186 @@ async function viewSales() {
   bindItemRows(main.querySelector('#sold'), items, viewSales);
 }
 
+// ---------- sigillati: sbustare o rivendere? (Premium) ----------
+const sealedState = { lang: 'it', fee: 10, paid: '', data: null, highlight: null, packs: {}, manual: { packs: '', price: '' } };
+const isSealedName = (n) => /booster|box|bundle|elite trainer|\betb\b|blister|pack|tin|collection|display|bustina/i.test(n || '');
+const oneIn = (p) => p > 0 ? `1 su ${p >= 1 ? '1' : Math.round(1 / p)}` : '—';
+
+async function viewSealed(bp) {
+  shell('Sbusto o rivendo?', '', { back: '#items' });
+  const main = app.querySelector('main');
+  if (!isPremium()) {
+    main.innerHTML = `<div class="card locked" id="lk">🎁 Bustine, ETB e box: conviene sbustare o rivendere?<br>
+      <span class="small muted">Valore atteso, pull rate, probabilità di rientrare e prezzo consigliato · Funzione Premium</span></div>`;
+    main.querySelector('#lk').onclick = () => premiumModal("L'analisi sbustare o rivendere");
+    return;
+  }
+  main.innerHTML = `
+    <div class="card">
+      <div class="field"><label>Set (es. “Evoluzioni Prismatiche”, “151”) o link CardTrader del prodotto</label>
+        <input id="set-q" type="search" autocomplete="off" placeholder="Cerca il set…" value="${esc(sealedState.data?.set_name || '')}"><div id="set-res"></div></div>
+      <div class="grid2">
+        <div class="field"><label>Lingua</label><select id="s-lang">${LANGS.map((l) => `<option value="${l}" ${sealedState.lang === l ? 'selected' : ''}>${l.toUpperCase()}</option>`).join('')}</select></div>
+        <div class="field"><label>Commissioni vendita (%)</label><input id="s-fee" type="number" min="0" max="50" value="${sealedState.fee}"></div>
+      </div>
+      <div class="field"><label>Quanto l'hai pagato? (€, facoltativo)</label><input id="s-paid" inputmode="decimal" value="${esc(sealedState.paid)}"></div>
+    </div>
+    <div id="sealed-out">${sealedState.data ? '' : '<p class="small muted">Scegli un set: carico i prezzi di tutte le carte e dei prodotti sigillati da CardTrader.</p>'}</div>`;
+  const out = main.querySelector('#sealed-out');
+  const load = (expId) => guarded(null, async () => {
+    out.innerHTML = '<div class="empty">Carico prezzi e carte del set… (può richiedere qualche secondo)</div>';
+    try {
+      sealedState.data = await api(`sealed/analyze?expansion_id=${expId}&language=${sealedState.lang}`);
+      main.querySelector('#set-q').value = sealedState.data.set_name || '';
+      renderSealed(out);
+    } catch (e) { out.innerHTML = `<p class="neg">${esc(e.message)}</p>`; }
+  });
+  main.querySelector('#s-lang').onchange = (e) => { sealedState.lang = e.target.value; if (sealedState.data) load(sealedState.data.expansion_id); };
+  main.querySelector('#s-fee').oninput = (e) => { sealedState.fee = Math.max(0, Math.min(50, +e.target.value || 0)); if (sealedState.data) renderSealed(out); };
+  main.querySelector('#s-paid').oninput = (e) => { sealedState.paid = e.target.value; if (sealedState.data) renderSealed(out); };
+  let t;
+  main.querySelector('#set-q').addEventListener('input', (e) => {
+    clearTimeout(t);
+    t = setTimeout(async () => {
+      const q = e.target.value.trim();
+      const res = main.querySelector('#set-res');
+      const link = q.match(/cardtrader\.com\/.*?cards\/(\d+)/i);
+      if (link) { res.innerHTML = ''; location.hash = `#sealed/${link[1]}`; return; }
+      if (q.length < 2) { res.innerHTML = ''; return; }
+      const sets = await api('sealed/sets?q=' + encodeURIComponent(q)).catch(() => []);
+      res.innerHTML = sets.length ? `<div class="suggest">${sets.map((x) => `<div data-exp="${x.id}"><span><strong>${esc(x.name)}</strong> <span class="small muted">${esc(x.code || '')}</span></span></div>`).join('')}</div>`
+        : '<div class="small muted" style="padding:6px 2px">Nessun set trovato.</div>';
+      res.querySelectorAll('[data-exp]').forEach((el) => el.addEventListener('click', () => { res.innerHTML = ''; sealedState.highlight = null; load(+el.dataset.exp); }));
+    }, 300);
+  });
+  if (bp) {
+    // Arrivo da un prodotto del magazzino o da un link: trovo il suo set.
+    out.innerHTML = '<div class="empty">Cerco il prodotto…</div>';
+    try {
+      const p = await api(`catalog/price?blueprint_id=${bp}`);
+      if (!p.expansion_id) throw new Error('Nessuna offerta su CardTrader per questo prodotto: non riesco a capire il set');
+      sealedState.highlight = bp;
+      load(p.expansion_id);
+    } catch (e) { out.innerHTML = `<p class="neg">${esc(e.message)}</p>`; }
+  } else if (sealedState.data) renderSealed(out);
+}
+
+function sealedModel(d) {
+  const tiers = d.rarities.filter((r) => r.per_pack > 0 && r.cards.length).map((r) => ({ p: r.per_pack, prices: r.cards.map((c) => c.price) }));
+  const ev = d.bulk_per_pack + tiers.reduce((s, r) => s + r.p * (r.prices.reduce((a, b) => a + b, 0) / r.prices.length), 0);
+  return { tiers, ev };
+}
+
+// Simula N sbustamenti: per ogni bustina e rarità, estrazione con il pull rate e carta a caso di quella rarità.
+function simulate(model, packs, bulk, sims = 3000) {
+  const out = new Float64Array(sims);
+  for (let s = 0; s < sims; s++) {
+    let tot = 0;
+    for (let k = 0; k < packs; k++) {
+      tot += bulk;
+      for (const t of model.tiers) {
+        let hits = Math.floor(t.p) + (Math.random() < t.p % 1 ? 1 : 0);
+        while (hits-- > 0) tot += t.prices[(Math.random() * t.prices.length) | 0];
+      }
+    }
+    out[s] = tot;
+  }
+  return out.sort();
+}
+
+function sealedVerdict(d, model, packs, market, median, fee, paid) {
+  const k = 1 - fee / 100;
+  const sellNet = market * k;
+  const sims = simulate(model, packs, d.bulk_per_pack);
+  const net = (v) => v * k;
+  const pct = (q) => net(sims[Math.min(sims.length - 1, Math.floor(q * sims.length))]);
+  const evOpen = net(model.ev * packs);
+  const beat = sims.filter((v) => net(v) >= sellNet).length / sims.length;
+  const ratio = sellNet > 0 ? evOpen / sellNet : 0;
+  // In media conviene sbustare, ma se si supera il sigillato in meno di 1 caso su 3 è una scommessa.
+  const verdict = ratio >= 1.1 ? (beat < 0.33 ? ['even', 'Sbusta solo se ami il rischio'] : ['open', 'Conviene sbustare'])
+    : ratio <= 0.9 ? ['sell', 'Conviene rivendere'] : ['even', 'Quasi pari'];
+  const fast = market >= 5 ? Math.floor(market * 0.97) - 0.01 : Math.round(market * 0.97 * 100) / 100;
+  return { sellNet, evOpen, beat, p10: pct(0.1), p50: pct(0.5), p90: pct(0.9), verdict, fast, median,
+    paidSell: paid != null ? sellNet - paid : null, paidOpen: paid != null ? evOpen - paid : null,
+    beatPaid: paid != null ? sims.filter((v) => net(v) >= paid).length / sims.length : null };
+}
+
+function renderSealed(out) {
+  const d = sealedState.data;
+  const fee = sealedState.fee;
+  const paid = sealedState.paid !== '' && !isNaN(parseFloat(sealedState.paid.replace(',', '.'))) ? parseFloat(sealedState.paid.replace(',', '.')) : null;
+  const model = sealedModel(d);
+  const unknown = d.rarities.filter((r) => !(r.per_pack > 0) && r.cards.length);
+  const products = [...d.sealed.filter((x) => x.price)].sort((a, b) => (b.blueprint_id === sealedState.highlight) - (a.blueprint_id === sealedState.highlight) || (a.packs || 99) - (b.packs || 99));
+  const hits = d.rarities.filter((r) => r.per_pack > 0).flatMap((r) => r.cards.map((c) => ({ ...c, rarity: r.rarity, p: r.per_pack / r.cards.length })))
+    .sort((a, b) => b.price - a.price).slice(0, 8);
+
+  const card = (title, packs, market, median, bp, img) => {
+    if (!packs) {
+      return `<div class="card sealed-card"><div class="sealed-head">${img ? `<img src="${esc(img)}" alt="">` : ''}<div><strong>${esc(title)}</strong><div class="small muted">Prezzo ${eur(market)}</div></div></div>
+        <div class="field" style="margin:8px 0 0"><label>Quante bustine contiene?</label><input type="number" min="1" data-packs="${bp}" value=""></div></div>`;
+    }
+    const v = sealedVerdict(d, model, packs, market, median, fee, paid);
+    return `<div class="card sealed-card ${bp === sealedState.highlight ? 'hl' : ''}">
+      <div class="sealed-head">${img ? `<img src="${esc(img)}" alt="">` : ''}<div style="flex:1"><strong>${esc(title)}</strong>
+        <div class="small muted">${packs} bustin${packs === 1 ? 'a' : 'e'} ${bp !== 'manual' ? `· <input class="mini" type="number" min="1" data-packs="${bp}" value="${packs}">` : ''}</div></div>
+        <span class="badge verdict ${v.verdict[0]}">${v.verdict[1]}</span></div>
+      <div class="grid2 sealed-grid">
+        <div><div class="small muted">Rivendendo (netto)</div><strong>${eur(v.sellNet)}</strong><div class="small muted">mercato ${eur(market)}</div></div>
+        <div><div class="small muted">Sbustando (atteso, netto)</div><strong>${eur(v.evOpen)}</strong><div class="small muted">8 volte su 10 tra ${eur(v.p10)} e ${eur(v.p90)}</div></div>
+      </div>
+      <p class="small" style="margin:8px 0 4px">🎲 Sbustando superi il valore del sigillato nel <strong>${Math.round(v.beat * 100)}%</strong> dei casi${paid != null ? ` · rientri della spesa nel <strong>${Math.round(v.beatPaid * 100)}%</strong>` : ''}.</p>
+      ${paid != null ? `<p class="small" style="margin:0 0 4px">Con ${eur(paid)} pagati: rivendendo ${signed(v.paidSell)} · sbustando (in media) ${signed(v.paidOpen)}</p>` : ''}
+      ${v.verdict[0] !== 'open' ? `<p class="small" style="margin:0">💶 Prezzo consigliato: <strong>${eur(v.fast)}</strong> per vendere in fretta (sotto l'offerta più bassa) · fino a ${eur(Math.max(market, v.median || 0))} se puoi aspettare.</p>` : ''}
+    </div>`;
+  };
+
+  out.innerHTML = `
+    <div class="kpis" style="margin-top:12px">
+      <div class="kpi wide"><div class="label">Valore atteso di una bustina · ${esc(d.set_name || '')} (${(d.language || 'tutte').toUpperCase()})</div>
+        <div class="value">${eur(model.ev)}</div><div class="small muted">netto commissioni ${eur(model.ev * (1 - fee / 100))} · prezzi CardTrader, aggiornati ${fmtDate(d.updated_at.slice(0, 10))}</div></div>
+    </div>
+    <h2>Prodotti sigillati</h2>
+    <div class="list">${products.length ? products.map((x) => card(x.name, sealedState.packs[x.blueprint_id] || x.packs, x.price.min, x.price.median, x.blueprint_id, x.image_url)).join('')
+      : '<p class="small muted">Nessun prodotto sigillato in vendita su CardTrader per questo set: usa il calcolo manuale qui sotto.</p>'}
+      <div class="card"><strong>Altro prodotto</strong>
+        <div class="grid2" style="margin-top:8px"><div class="field"><label>Bustine</label><input type="number" min="1" id="m-packs" value="${esc(sealedState.manual.packs)}"></div>
+        <div class="field"><label>Prezzo di mercato (€)</label><input inputmode="decimal" id="m-price" value="${esc(sealedState.manual.price)}"></div></div>
+        <div id="m-out"></div></div>
+    </div>
+    <h2>Carte che fanno la differenza</h2>
+    <div class="card">${hits.map((c) => `<div class="grid2" style="padding:4px 0"><span>${esc(c.name)} <span class="small muted">${esc(c.number || '')} · ${esc(c.rarity)}</span></span><span>${eur(c.price)} <span class="small muted">${oneIn(c.p)} bust.</span></span></div>`).join('') || '<span class="muted">Nessun prezzo disponibile.</span>'}</div>
+    <h2>Pull rate per rarità</h2>
+    <div class="card">
+      <table class="plans rates"><tr><th>Rarità</th><th>Probabilità</th><th>Carte</th><th>Valore medio</th></tr>
+      ${d.rarities.map((r) => `<tr><td>${esc(r.rarity)}${r.custom ? ' ✎' : ''}</td>
+        <td>${d.can_edit_rates ? `<input class="mini" data-rate="${esc(r.rarity)}" value="${r.per_pack ? Math.round(1 / r.per_pack * 10) / 10 : ''}" placeholder="—" title="1 su N bustine">` : oneIn(r.per_pack)}</td>
+        <td>${r.cards.length}</td><td>${eur(r.avg)}</td></tr>`).join('')}</table>
+      ${d.can_edit_rates ? '<p class="small muted">Proprietario: scrivi N per “1 su N bustine” (vuoto = non conteggiata).</p><button class="btn sm" id="save-rates">Salva pull rate del set</button>' : ''}
+      ${unknown.length ? `<p class="small muted">Senza pull rate (non conteggiate): ${unknown.map((r) => esc(r.rarity)).join(', ')}.</p>` : ''}
+    </div>
+    <p class="small muted">Stime indicative: pull rate medi della community e prezzi delle offerte più basse. Le comuni/non comuni valgono ${eur(d.bulk_per_pack)} a bustina (bulk). Il risultato reale di uno sbustamento può variare molto.</p>`;
+
+  out.querySelectorAll('[data-packs]').forEach((inp) => inp.addEventListener('change', () => { sealedState.packs[+inp.dataset.packs] = Math.max(1, +inp.value || 1); renderSealed(out); }));
+  const manual = () => {
+    sealedState.manual = { packs: out.querySelector('#m-packs').value, price: out.querySelector('#m-price').value };
+    const n = +sealedState.manual.packs, pr = parseFloat(String(sealedState.manual.price).replace(',', '.'));
+    out.querySelector('#m-out').innerHTML = n > 0 && pr > 0 ? card(`${n} bustine a ${eur(pr)}`, n, pr, pr, 'manual', null) : '';
+  };
+  out.querySelector('#m-packs').oninput = manual;
+  out.querySelector('#m-price').oninput = manual;
+  manual();
+  out.querySelector('#save-rates')?.addEventListener('click', (e) => guarded(e.target, async () => {
+    const rates = {};
+    out.querySelectorAll('[data-rate]').forEach((i) => { const n = parseFloat(i.value.replace(',', '.')); if (n > 0) rates[i.dataset.rate] = 1 / n; });
+    await api(`sealed/rates/${d.expansion_id}`, { method: 'PUT', body: { rates } });
+    toast('Pull rate salvati');
+    sealedState.data = await api(`sealed/analyze?expansion_id=${d.expansion_id}&language=${sealedState.lang}`);
+    renderSealed(out);
+  }));
+}
+
 // ---------- report ----------
 async function viewReport(year) {
   shell('Report annuale', '<div class="empty">Caricamento…</div>', { back: '#sales' });
@@ -1051,6 +1239,7 @@ async function viewSettings() {
           <tr><td>Storico prezzi e avvisi</td><td>—</td><td>✓</td></tr>
           <tr><td>Grafici e report annuale</td><td>—</td><td>✓</td></tr>
           <tr><td>Divisione profitti tra soci</td><td>—</td><td>✓</td></tr>
+          <tr><td>Sbusto o rivendo? (bustine, ETB, box)</td><td>—</td><td>✓</td></tr>
           <tr><td>Prezzo</td><td>Gratis</td><td>${eur(b.price)}/mese</td></tr>
         </table>
         <div class="actions">
@@ -1261,6 +1450,7 @@ async function router() {
       case '#admin': return await viewAdmin();
       case '#report': return await viewReport(+id || null);
       case '#partners': return await viewPartners();
+      case '#sealed': return await viewSealed(+id || null);
       default: return await viewDashboard();
     }
   } catch (e) {

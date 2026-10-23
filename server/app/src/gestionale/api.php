@@ -8,6 +8,7 @@ require_once __DIR__ . '/account.php';
 require_once __DIR__ . '/premium.php';
 require_once __DIR__ . '/growth.php';
 require_once __DIR__ . '/paypal.php';
+require_once __DIR__ . '/sealed.php';
 
 const G_STATUSES = ['in_stock', 'listed', 'sold'];
 
@@ -783,6 +784,7 @@ function g_ct_price(int $bp, ?string $lang, ?string $cond, bool $withImage): arr
         'condition_used' => $used[1],
         'name' => $first['name_en'] ?? null,
         'set_name' => $first['expansion']['name_en'] ?? null,
+        'expansion_id' => isset($first['expansion']['id']) ? (int)$first['expansion']['id'] : null,
     ];
 }
 
@@ -922,6 +924,9 @@ function g_route(string $method, array $seg): void
             case 'GET reports/annual': g_annual_report();
             case 'GET reports/annual.csv': g_annual_csv();
             case 'POST events': g_event_from_client();
+            case 'GET sealed/sets': g_sealed_sets();
+            case 'GET sealed/analyze': g_sealed_analyze();
+            case 'PUT sealed/rates/:id': g_sealed_rates_save($id);
             case 'GET admin/usage': g_admin_usage();
             case 'POST billing/checkout': g_billing_checkout();
             case 'POST billing/portal': g_billing_portal();

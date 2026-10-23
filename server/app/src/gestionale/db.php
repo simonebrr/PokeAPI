@@ -223,6 +223,23 @@ function g_migrate(PDO $pdo): void
         ]);
         g_set_schema($pdo, 6);
     }
+
+    if ($version < 7) {
+        // Analisi prodotti sigillati: cache dati CardTrader e pull rate personalizzati per set.
+        $pdo->exec("CREATE TABLE IF NOT EXISTS g_cache (
+            k VARCHAR(190) PRIMARY KEY,
+            v MEDIUMTEXT NOT NULL,
+            expires_at DATETIME NOT NULL
+        )");
+        $pdo->exec("CREATE TABLE IF NOT EXISTS g_pull_rates (
+            id $id,
+            expansion_id INT NOT NULL,
+            rarity VARCHAR(80) NOT NULL,
+            per_pack DECIMAL(8,5) NOT NULL,
+            UNIQUE (expansion_id, rarity)
+        )");
+        g_set_schema($pdo, 7);
+    }
 }
 
 function g_add_columns(PDO $pdo, array $cols): void
