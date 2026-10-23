@@ -208,3 +208,5 @@ a.chip { text-decoration: none; }
 .fbar { height: 8px; background: var(--chip); border-radius: 999px; overflow: hidden; }
 .fbar div { height: 100%; background: var(--primary); }
 .funnel strong { text-align: right; }
+.btn.paypal { background: #ffc439; color: #003087; }
+.btn.paypal strong { font-style: italic; }

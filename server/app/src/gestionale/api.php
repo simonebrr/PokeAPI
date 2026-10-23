@@ -7,6 +7,7 @@ require_once __DIR__ . '/billing.php';
 require_once __DIR__ . '/account.php';
 require_once __DIR__ . '/premium.php';
 require_once __DIR__ . '/growth.php';
+require_once __DIR__ . '/paypal.php';
 
 const G_STATUSES = ['in_stock', 'listed', 'sold'];
 
@@ -850,6 +851,9 @@ function g_route(string $method, array $seg): void
     if ($method === 'POST' && implode('/', $seg) === 'billing/webhook') {
         g_billing_webhook();
     }
+    if ($method === 'POST' && implode('/', $seg) === 'billing/paypal/webhook') {
+        g_paypal_webhook();
+    }
 
     // Le scritture accettano solo JSON: blocca form cross-site (CSRF).
     if (in_array($method, ['POST', 'PUT', 'DELETE'], true)
@@ -921,6 +925,9 @@ function g_route(string $method, array $seg): void
             case 'GET admin/usage': g_admin_usage();
             case 'POST billing/checkout': g_billing_checkout();
             case 'POST billing/portal': g_billing_portal();
+            case 'POST billing/paypal/subscribe': g_paypal_subscribe();
+            case 'POST billing/paypal/confirm': g_paypal_confirm();
+            case 'POST billing/paypal/cancel': g_paypal_cancel();
             case 'GET admin/overview': g_admin_overview();
             case 'PUT admin/workspaces/:id': g_admin_workspace_update($id);
         }

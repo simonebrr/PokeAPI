@@ -1,5 +1,9 @@
 # CardLedger – Piano di sviluppo
 
+> **Stato (ottobre 2026):** fasi 0-4 sviluppate nel codice, più pagamenti PayPal con attivazione automatica.
+> Restano solo i passaggi che richiedono te: rigenerare i token, server + dominio, account SMTP/PayPal,
+> testi legali definitivi, aspetti fiscali. Istruzioni in `server/GESTIONALE.md`.
+
 Obiettivo: passare da gestionale personale a prodotto vendibile (Free + Premium).
 Ogni fase è utilizzabile da sola. Stime indicative per una persona con l'aiuto di Claude.
 

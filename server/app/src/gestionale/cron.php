@@ -93,6 +93,25 @@ function cron_refresh_prices(): void
     cron_log("aggiornamento prezzi completato: $totUpdated carte");
 }
 
+// Riallinea gli abbonamenti PayPal (rete di sicurezza se un webhook non è arrivato).
+function cron_paypal_sync(): void
+{
+    if (!g_paypal_enabled()) {
+        return;
+    }
+    $subs = g_pdo()->query('SELECT paypal_subscription_id FROM g_workspaces WHERE paypal_subscription_id IS NOT NULL')->fetchAll(PDO::FETCH_COLUMN);
+    $ok = 0;
+    foreach ($subs as $id) {
+        try {
+            g_paypal_sync($id);
+            $ok++;
+        } catch (Throwable $e) {
+            cron_log("paypal $id: " . $e->getMessage());
+        }
+    }
+    cron_log("abbonamenti PayPal verificati: $ok/" . count($subs));
+}
+
 // Fotografia giornaliera del valore del magazzino (per i grafici di andamento).
 function cron_snapshots(): void
 {
@@ -107,6 +126,7 @@ function cron_snapshots(): void
 function cron_tasks(): array
 {
     return [
+        'paypal' => 'cron_paypal_sync',
         'prices' => 'cron_refresh_prices',
         'snapshots' => 'cron_snapshots',
         'trial' => 'cron_trial_reminders',

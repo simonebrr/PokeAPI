@@ -1054,9 +1054,11 @@ async function viewSettings() {
           <tr><td>Prezzo</td><td>Gratis</td><td>${eur(b.price)}/mese</td></tr>
         </table>
         <div class="actions">
-          ${b.stripe_enabled && (b.state !== 'pro' || b.canceled) ? `<button class="btn" id="checkout">Passa a Premium · ${eur(b.price)}/mese</button>` : ''}
+          ${b.paypal_enabled && (b.state !== 'pro' || b.canceled) ? `<button class="btn paypal" id="paypal">Passa a Premium con <strong>PayPal</strong> · ${eur(b.price)}/mese</button>` : ''}
+          ${b.stripe_enabled && (b.state !== 'pro' || b.canceled) ? `<button class="btn" id="checkout">${b.paypal_enabled ? 'Paga con carta' : 'Passa a Premium'} · ${eur(b.price)}/mese</button>` : ''}
           ${b.stripe_enabled && b.has_stripe_customer ? '<button class="btn secondary" id="portal">Gestisci pagamento</button>' : ''}
-          ${!b.stripe_enabled && b.state !== 'pro' ? '<p class="small muted">Per attivare Premium contatta il gestore del servizio.</p>' : ''}
+          ${b.has_paypal && b.state === 'pro' && !b.canceled ? '<button class="btn secondary" id="paypal-cancel">Disdici abbonamento PayPal</button>' : ''}
+          ${!b.stripe_enabled && !b.paypal_enabled && b.state !== 'pro' ? '<p class="small muted">Per attivare Premium contatta il gestore del servizio.</p>' : ''}
         </div>` : ''}
     </div>
     <h2>Prezzi e avvisi ${b.premium ? '' : '<span class="badge">Premium</span>'}</h2>
@@ -1129,6 +1131,11 @@ async function viewSettings() {
   const goTo = (path) => async (e) => guarded(e.target, async () => { location.href = (await api(path, { method: 'POST', body: {} })).url; });
   document.getElementById('checkout')?.addEventListener('click', goTo('billing/checkout'));
   document.getElementById('portal')?.addEventListener('click', goTo('billing/portal'));
+  document.getElementById('paypal')?.addEventListener('click', goTo('billing/paypal/subscribe'));
+  document.getElementById('paypal-cancel')?.addEventListener('click', (e) => {
+    if (!confirm('Disdire l\'abbonamento? Premium resta attivo fino alla fine del periodo già pagato, poi torni al piano Free.')) return;
+    guarded(e.target, async () => { await api('billing/paypal/cancel', { method: 'POST', body: {} }); toast('Abbonamento disdetto'); viewSettings(); });
+  });
   document.getElementById('ref-share').onclick = async () => {
     const link = state.me.referral.link;
     const text = 'Uso CardLedger per segnare lotti, carte e profitti: iscriviti con il mio link e hai 30 giorni di Premium gratis';
@@ -1282,6 +1289,19 @@ function clearOfflineData() {
 window.addEventListener('hashchange', router);
 (async () => {
   try { state.me = await api('me', { quiet: true }); } catch { state.me = null; }
+  const qs = new URLSearchParams(location.search);
+  if (qs.get('paypal') && state.me) {
+    history.replaceState(null, '', '/app/#settings');
+    if (qs.get('paypal') === 'ok' && qs.get('subscription_id')) {
+      try {
+        const r = await api('billing/paypal/confirm', { method: 'POST', body: { subscription_id: qs.get('subscription_id') } });
+        state.me.billing = r.billing;
+        toast(r.status === 'ACTIVE' ? 'Premium attivato, grazie! 🎉' : 'Pagamento in elaborazione: Premium si attiverà a breve');
+      } catch (e) { toast(e.message, true); }
+    } else {
+      toast('Pagamento annullato');
+    }
+  }
   router();
   flushQueue();
 })();

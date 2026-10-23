@@ -216,6 +216,13 @@ function g_migrate(PDO $pdo): void
         }
         g_set_schema($pdo, 5);
     }
+
+    if ($version < 6) {
+        g_add_columns($pdo, [
+            ['g_workspaces', 'paypal_subscription_id', 'VARCHAR(40) NULL'],
+        ]);
+        g_set_schema($pdo, 6);
+    }
 }
 
 function g_add_columns(PDO $pdo, array $cols): void

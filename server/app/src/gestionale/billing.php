@@ -38,7 +38,7 @@ function g_ws_status(int $wsId): array
         return $cache[$wsId];
     }
     $pdo = g_pdo();
-    $stmt = $pdo->prepare('SELECT plan, trial_ends_at, paid_until, stripe_customer_id FROM g_workspaces WHERE id = ?');
+    $stmt = $pdo->prepare('SELECT plan, trial_ends_at, paid_until, stripe_customer_id, paypal_subscription_id FROM g_workspaces WHERE id = ?');
     $stmt->execute([$wsId]);
     $ws = $stmt->fetch() ?: [];
     $stmt = $pdo->prepare('SELECT id, email FROM g_users WHERE workspace_id = ?');
@@ -62,6 +62,7 @@ function g_ws_status(int $wsId): array
     $s['premium'] = $s['state'] !== 'free';
     $s['canceled'] = ($ws['plan'] ?? '') === 'canceled';
     $s['has_stripe_customer'] = !empty($ws['stripe_customer_id']);
+    $s['has_paypal'] = !empty($ws['paypal_subscription_id']);
     return $cache[$wsId] = $s;
 }
 
@@ -107,6 +108,7 @@ function g_billing_info(array $u): array
     return g_ws_status($u['workspace_id']) + [
         'price' => g_plan_price(),
         'stripe_enabled' => g_stripe_enabled(),
+        'paypal_enabled' => g_paypal_enabled(),
         'trial_days' => g_trial_days(),
         'free_item_limit' => g_free_item_limit(),
         'items_in_stock' => g_items_in_stock($u['workspace_id']),
@@ -277,7 +279,7 @@ function g_admin_overview(): void
     g_admin();
     $pdo = g_pdo();
 
-    $workspaces = $pdo->query('SELECT id, name, plan, trial_ends_at, paid_until, stripe_customer_id, created_at FROM g_workspaces ORDER BY id DESC')->fetchAll();
+    $workspaces = $pdo->query('SELECT id, name, plan, trial_ends_at, paid_until, stripe_customer_id, paypal_subscription_id, created_at FROM g_workspaces ORDER BY id DESC')->fetchAll();
     $members = [];
     foreach ($pdo->query('SELECT id, workspace_id, name, email, created_at FROM g_users ORDER BY id')->fetchAll() as $m) {
         $members[(int)$m['workspace_id']][] = $m;
@@ -311,6 +313,7 @@ function g_admin_overview(): void
             'until' => $st['until'],
             'days_left' => $st['days_left'],
             'stripe' => !empty($w['stripe_customer_id']),
+            'provider' => !empty($w['paypal_subscription_id']) ? 'PayPal' : (!empty($w['stripe_customer_id']) ? 'Stripe' : 'Manuale'),
             'created_at' => $w['created_at'],
             'members' => array_map(fn($m) => ['name' => $m['name'], 'email' => $m['email']], $members[$id] ?? []),
             'cards' => (int)($us['cards'] ?? 0),
@@ -343,6 +346,7 @@ function g_admin_overview(): void
         'trials_expiring' => count(array_filter($rows, fn($r) => $r['state'] === 'trial' && $r['days_left'] <= 3)),
         'signups' => array_map(fn($m, $n) => ['month' => $m, 'value' => $n], array_keys($signups), $signups),
         'stripe_enabled' => g_stripe_enabled(),
+        'paypal_enabled' => g_paypal_enabled(),
         'rows' => $rows,
     ]);
 }
