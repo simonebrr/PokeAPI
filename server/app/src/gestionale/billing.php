@@ -141,8 +141,10 @@ function g_app_url(): string
     if ($url = getenv('APP_URL')) {
         return rtrim($url, '/');
     }
-    $https = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
-    return ($https ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+    // In produzione imposta sempre APP_URL: i link nelle email non devono dipendere dall'header Host.
+    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+    return ($https ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost:8080');
 }
 
 function g_billing_checkout(): void

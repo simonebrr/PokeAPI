@@ -10,3 +10,8 @@ RewriteRule ^ index.php [L]
 <Files "token.txt">
     Require all denied
 </Files>
+
+# Script interni: solo da riga di comando/cron
+<FilesMatch "^(db_populate|api)\.php$">
+    Require all denied
+</FilesMatch>

@@ -11,7 +11,9 @@ if ($segments[0] === 'api') {
 }
 
 if ($path === '') {
-    header('Location: /app/');
+    // Pagina di presentazione
+    header('Content-Type: text/html; charset=utf-8');
+    readfile(__DIR__ . '/home.html');
     exit;
 }
 

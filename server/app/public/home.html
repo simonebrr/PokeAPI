@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CardLedger – Gestionale per compravendita di carte Pokémon</title>
+  <meta name="description" content="Segna lotti, carte, vendite e profitti della tua compravendita di carte Pokémon. Prezzi CardTrader aggiornati. Gratis per sempre, Premium facoltativo.">
+  <meta name="theme-color" content="#1f2a44">
+  <link rel="manifest" href="/app/manifest.webmanifest">
+  <link rel="stylesheet" href="/site.css">
+</head>
+<body>
+  <header class="top"><div class="wrap">
+    <a class="brand" href="/"><span class="logo-dot"></span>CardLedger</a>
+    <a class="btn ghost" href="/app/" id="nav-cta">Accedi</a>
+  </div></header>
+
+  <div class="hero"><div class="wrap">
+    <h1>Sai davvero quanto guadagni con le carte?</h1>
+    <p>Il gestionale per chi compra e vende carte Pokémon: lotti, carte, vendite e profitti in un posto solo, con i prezzi di mercato aggiornati.</p>
+    <a class="btn" href="/app/?signup" id="hero-cta">Inizia gratis</a>
+    <div class="story">Lotto da 100 carte pagato <strong>10 €</strong> → dentro carte per <strong>214 €</strong>.<br>CardLedger te lo mostra subito: <strong>x21</strong> sul lotto, profitto e cosa ti resta in magazzino.</div>
+  </div></div>
+
+  <section><div class="wrap">
+    <h2>Cosa fa</h2>
+    <div class="grid">
+      <div class="card"><h3>📦 Lotti</h3><p>Quanto hai pagato, cosa c'era dentro, quanto vale: moltiplicatore e profitto per ogni acquisto.</p></div>
+      <div class="card"><h3>🔎 Prezzi CardTrader</h3><p>Cerca la carta o incolla il link: prezzo minimo e mediano per lingua e condizione.</p></div>
+      <div class="card"><h3>💶 Vendite</h3><p>Prezzo, commissioni e canale (Vinted, Cardmarket, eBay…). Totali per canale e per mese.</p></div>
+      <div class="card"><h3>📊 Riepilogo</h3><p>Speso, incassato, valore del magazzino e profitto potenziale, sempre aggiornati.</p></div>
+      <div class="card"><h3>👥 Soci</h3><p>Compri in due? Lavorate sullo stesso negozio e dividete i profitti per quote.</p></div>
+      <div class="card"><h3>📱 Dal telefono</h3><p>Pensato per lo smartphone: si installa come un'app, comodo anche alle fiere.</p></div>
+    </div>
+  </div></section>
+
+  <section><div class="wrap">
+    <h2>Come funziona</h2>
+    <ol class="steps">
+      <li><div><strong>Registra il lotto</strong> con il prezzo pagato.</div></li>
+      <li><div><strong>Aggiungi le carte</strong> che valgono: nome, set e prezzo arrivano dal catalogo.</div></li>
+      <li><div><strong>Segna le vendite</strong>: profitti e moltiplicatori si calcolano da soli.</div></li>
+    </ol>
+  </div></section>
+
+  <section><div class="wrap">
+    <h2>Piani</h2>
+    <table class="plans">
+      <tr><th></th><th>Free</th><th>⭐ Premium</th></tr>
+      <tr><td>Lotti, vendite, riepilogo</td><td>✓</td><td>✓</td></tr>
+      <tr><td>Prezzo CardTrader per carta</td><td>✓</td><td>✓</td></tr>
+      <tr><td>Export Excel e import CSV</td><td>✓</td><td>✓</td></tr>
+      <tr><td>Carte in magazzino</td><td>200</td><td>Illimitate</td></tr>
+      <tr><td>Aggiornamento valori in blocco e automatico</td><td>—</td><td>✓</td></tr>
+      <tr><td>Storico prezzi e avvisi</td><td>—</td><td>✓</td></tr>
+      <tr><td>Soci e divisione profitti</td><td>—</td><td>✓</td></tr>
+      <tr><td>Grafici e report annuale</td><td>—</td><td>✓</td></tr>
+      <tr><td><strong>Prezzo</strong></td><td><strong>Gratis</strong></td><td><strong>4,99 €/mese</strong></td></tr>
+    </table>
+    <p style="color:var(--muted);font-size:14px">14 giorni di Premium in prova all'iscrizione, senza carta di credito. Poi resti su Free, senza perdere i dati.</p>
+  </div></section>
+
+  <section class="cta"><div class="wrap">
+    <h2>Pronto a contare i tuoi profitti?</h2>
+    <a class="btn" href="/app/?signup">Crea il tuo negozio gratis</a>
+  </div></section>
+
+  <footer><div class="wrap">
+    © CardLedger · <a href="/privacy.html">Privacy</a> · <a href="/termini.html">Termini</a><br>
+    Non affiliato a The Pokémon Company, Nintendo o CardTrader. Pokémon è un marchio dei rispettivi proprietari.
+  </div></footer>
+  <script>
+    // Già loggato: i pulsanti portano direttamente all'app.
+    fetch('/api/me', { credentials: 'same-origin' }).then(function (r) {
+      if (!r.ok) return;
+      document.getElementById('nav-cta').textContent = 'Apri l\'app';
+      var h = document.getElementById('hero-cta'); h.textContent = 'Apri l\'app'; h.href = '/app/';
+    }).catch(function () {});
+  </script>
+</body>
+</html>

@@ -18,7 +18,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 const fmtDate = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
 const roiBadge = (r) => r == null ? '' : `<span class="badge roi">x${r.toLocaleString('it-IT')}</span>`;
 
-async function api(path, { method = 'GET', body } = {}) {
+async function api(path, { method = 'GET', body, quiet = false } = {}) {
   const res = await fetch('/api/' + path, {
     method,
     credentials: 'same-origin',
@@ -28,7 +28,7 @@ async function api(path, { method = 'GET', body } = {}) {
   const data = await res.json().catch(() => ({}));
   if (res.status === 401 && !path.startsWith('auth/')) {
     state.me = null;
-    renderAuth();
+    if (!quiet) renderAuth();
     throw new Error('Sessione scaduta');
   }
   if (res.status === 402 && state.me) {
@@ -71,6 +71,7 @@ function shell(title, content, { back, fab } = {}) {
       <h1>${esc(title)}</h1>
     </header>
     ${billingBanner()}
+    ${verifyBanner()}
     <main>${content}</main>
     ${fab ? `<button class="btn fab" id="fab">${fab}</button>` : ''}
     <nav class="tabbar">
@@ -207,6 +208,12 @@ function bulkRefresh(items, reload) {
   });
 }
 
+document.addEventListener('click', (e) => {
+  if (e.target.id !== 'resend-verify') return;
+  e.preventDefault();
+  guarded(null, async () => { await api('auth/resend-verification', { method: 'POST', body: {} }); toast('Link inviato, controlla la posta'); });
+});
+
 function openModal(title, html, onMount) {
   modalRoot.innerHTML = `
     <div class="modal-backdrop">
@@ -264,20 +271,83 @@ function renderAuth(mode = 'login') {
         ${mode === 'register' ? `<div class="field"><label>Nome</label><input name="name" required autocomplete="name"></div>` : ''}
         <div class="field"><label>Email</label><input name="email" type="email" required autocomplete="email"></div>
         <div class="field"><label>Password</label><input name="password" type="password" required minlength="${mode === 'register' ? 8 : 1}" autocomplete="${mode === 'register' ? 'new-password' : 'current-password'}"></div>
-        ${mode === 'register' ? `<div class="field"><label>Codice invito (opzionale, per unirti al socio)</label><input name="invite_code" autocapitalize="characters"></div>` : ''}
+        ${mode === 'register' ? `<div class="field"><label>Codice invito (opzionale, per unirti al socio)</label><input name="invite_code" autocapitalize="characters"></div>
+        <label class="check"><input type="checkbox" name="accept_terms" value="1" required> Accetto i <a href="/termini.html" target="_blank">termini d'uso</a> e l'<a href="/privacy.html" target="_blank">informativa privacy</a></label>` : ''}
         <button class="btn block">${mode === 'login' ? 'Accedi' : 'Crea account'}</button>
+        ${mode === 'login' ? '<p style="text-align:center;margin:14px 0 0"><a href="#" id="forgot">Password dimenticata?</a></p>' : ''}
       </form>
+      <p class="small muted" style="text-align:center"><a href="/">Cos'è ${'CardLedger'}?</a> · <a href="/privacy.html">Privacy</a> · <a href="/termini.html">Termini</a></p>
     </div>`;
+  app.querySelector('#forgot')?.addEventListener('click', (e) => { e.preventDefault(); renderForgot(); });
   app.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => renderAuth(b.dataset.mode)));
   const form = document.getElementById('auth-form');
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     guarded(form.querySelector('button'), async () => {
       state.me = await api(mode === 'login' ? 'auth/login' : 'auth/register', { method: 'POST', body: formData(form) });
-      if (!location.hash) location.hash = '#dashboard';
+      if (!location.hash || location.hash.startsWith('#reset') || location.hash.startsWith('#verify')) location.hash = '#dashboard';
       router();
     });
   });
+}
+
+function authShell(title, inner) {
+  modalRoot.innerHTML = '';
+  app.innerHTML = `<div class="auth"><div class="brand"><div class="logo-dot"></div><h1>${esc(title)}</h1></div>${inner}
+    <p style="text-align:center"><a href="#" id="to-login">← Torna all'accesso</a></p></div>`;
+  app.querySelector('#to-login').addEventListener('click', (e) => { e.preventDefault(); history.replaceState(null, '', '#'); state.me ? router() : renderAuth(); });
+}
+
+function renderForgot() {
+  authShell('Password dimenticata', `
+    <form class="card" id="f">
+      <p class="small muted" style="margin-top:0">Ti mandiamo un link per scegliere una nuova password.</p>
+      <div class="field"><label>Email</label><input name="email" type="email" required autocomplete="email"></div>
+      <button class="btn block">Invia link</button>
+    </form>`);
+  const f = app.querySelector('#f');
+  f.addEventListener('submit', (e) => {
+    e.preventDefault();
+    guarded(f.querySelector('button'), async () => {
+      await api('auth/forgot', { method: 'POST', body: formData(f) });
+      f.innerHTML = '<p style="margin:0">Se l\'email è registrata, riceverai a breve il link (controlla anche lo spam). Il link vale 1 ora.</p>';
+    });
+  });
+}
+
+function renderReset(token) {
+  authShell('Nuova password', `
+    <form class="card" id="f">
+      <div class="field"><label>Nuova password (min. 8 caratteri)</label><input name="password" type="password" minlength="8" required autocomplete="new-password"></div>
+      <button class="btn block">Salva e accedi</button>
+    </form>`);
+  const f = app.querySelector('#f');
+  f.addEventListener('submit', (e) => {
+    e.preventDefault();
+    guarded(f.querySelector('button'), async () => {
+      state.me = await api('auth/reset', { method: 'POST', body: { ...formData(f), token } });
+      toast('Password aggiornata');
+      location.hash = '#dashboard';
+    });
+  });
+}
+
+async function renderVerify(token) {
+  authShell('Conferma email', '<div class="card" id="v">Verifica in corso…</div>');
+  const box = app.querySelector('#v');
+  try {
+    await api('auth/verify', { method: 'POST', body: { token } });
+    box.innerHTML = '✅ Email confermata, grazie!';
+    if (state.me) { state.me.user.email_verified_at = new Date().toISOString(); setTimeout(() => (location.hash = '#dashboard'), 1200); }
+  } catch (e) {
+    box.textContent = e.message;
+  }
+}
+
+function verifyBanner() {
+  const u = state.me?.user;
+  if (!u || u.email_verified_at) return '';
+  return `<div class="banner info">📧 Conferma la tua email (${esc(u.email)}). <a href="#" id="resend-verify">Rinvia link</a></div>`;
 }
 
 // ---------- dashboard ----------
@@ -686,8 +756,36 @@ async function viewSettings() {
     <h2>Dati</h2>
     <div class="actions"><a class="btn secondary" href="/api/export/items.csv">⬇️ Esporta carte (CSV/Excel)</a></div>
     <h2>Account</h2>
-    <p class="muted">${esc(user.name)} · ${esc(user.email)}</p>
-    <button class="btn danger" id="logout">Esci</button>`);
+    <p class="muted">${esc(user.name)} · ${esc(user.email)} ${user.email_verified_at ? '✓' : '<span class="small">(non confermata)</span>'}</p>
+    <div class="actions">
+      <button class="btn secondary" id="chpw">Cambia password</button>
+      <button class="btn secondary" id="logout">Esci</button>
+    </div>
+    <h2>Zona pericolosa</h2>
+    <button class="btn danger" id="delete-account">Elimina il mio account</button>
+    <p class="small muted"><a href="/privacy.html">Privacy</a> · <a href="/termini.html">Termini</a></p>`);
+  document.getElementById('chpw').onclick = () => openModal('Cambia password', `
+    <form>
+      <div class="field"><label>Password attuale</label><input name="current" type="password" required autocomplete="current-password"></div>
+      <div class="field"><label>Nuova password (min. 8)</label><input name="password" type="password" minlength="8" required autocomplete="new-password"></div>
+      <button class="btn block">Salva</button>
+    </form>`, (m) => {
+    const f = m.querySelector('form');
+    f.addEventListener('submit', (e) => { e.preventDefault(); guarded(f.querySelector('button'), async () => { await api('account/password', { method: 'PUT', body: formData(f) }); closeModal(); toast('Password cambiata'); }); });
+  });
+  document.getElementById('delete-account').onclick = () => openModal('Elimina account', `
+    <form>
+      <p>${members.length > 1 ? 'Il tuo account verrà eliminato. Il negozio e i suoi dati restano ai tuoi soci.' : '<strong>Verranno eliminati per sempre il tuo account, il negozio, tutti i lotti, le carte e le vendite.</strong> Prima puoi esportare i dati da “Esporta carte”.'}</p>
+      <div class="field"><label>Conferma con la password</label><input name="password" type="password" required autocomplete="current-password"></div>
+      <button class="btn danger block">Elimina definitivamente</button>
+    </form>`, (m) => {
+    const f = m.querySelector('form');
+    f.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (!confirm('Sei sicuro? L\'operazione non si può annullare.')) return;
+      guarded(f.querySelector('button'), async () => { await api('account', { method: 'DELETE', body: formData(f) }); state.me = null; closeModal(); history.replaceState(null, '', '#'); renderAuth(); toast('Account eliminato'); });
+    });
+  });
   const goTo = (path) => async (e) => guarded(e.target, async () => { location.href = (await api(path, { method: 'POST', body: {} })).url; });
   document.getElementById('checkout')?.addEventListener('click', goTo('billing/checkout'));
   document.getElementById('portal')?.addEventListener('click', goTo('billing/portal'));
@@ -775,7 +873,10 @@ function adminWorkspace(r) {
 
 // ---------- router ----------
 async function router() {
-  if (!state.me) return renderAuth();
+  const [r0, tok] = location.hash.split('/');
+  if (r0 === '#reset' && tok) return renderReset(tok);
+  if (r0 === '#verify' && tok) return renderVerify(tok);
+  if (!state.me) return renderAuth(location.search.includes('signup') ? 'register' : 'login');
   closeModal();
   const [route, id] = (location.hash || '#dashboard').split('?')[0].split('/');
   try {
@@ -804,6 +905,6 @@ document.addEventListener('error', (e) => {
 
 window.addEventListener('hashchange', router);
 (async () => {
-  try { state.me = await api('me'); } catch { state.me = null; }
+  try { state.me = await api('me', { quiet: true }); } catch { state.me = null; }
   router();
 })();

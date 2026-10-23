@@ -1,2 +1,5 @@
-# Minuto  Ora  Giorno del mese  Mese  Giorno della settimana  Comando
-* * * * * /usr/local/bin/php /var/www/html/public/db_populate.php >> /var/log/cron.log 2>&1
+# Minuto  Ora  Giorno  Mese  GiornoSettimana  Comando
+# /etc/container.env contiene le variabili del .env (scritto all'avvio del container)
+SHELL=/bin/bash
+* * * * * . /etc/container.env; /usr/local/bin/php /var/www/html/public/db_populate.php >> /var/log/cron.log 2>&1
+30 3 * * * . /etc/container.env; /usr/local/bin/php /var/www/html/src/gestionale/cron.php >> /var/log/cron.log 2>&1

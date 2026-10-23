@@ -10,7 +10,9 @@ services:
       - ./app:/var/www/html:cached
       - ./init.php:/var/www/html/init.php
       - ./apache-config.conf:/etc/apache2/sites-available/000-default.conf
-    command: bash -c "/usr/local/bin/php /var/www/html/init.php; cron && apache2-foreground"
+      - storage:/var/www/html/storage
+    # Salva le variabili per il cron, prepara la cartella delle foto, poi avvia
+    command: bash -c "export -p > /etc/container.env && chmod 600 /etc/container.env && mkdir -p /var/www/html/storage && chown www-data:www-data /var/www/html/storage && /usr/local/bin/php /var/www/html/init.php; cron && apache2-foreground"
     restart: unless-stopped
     depends_on:
       db:
@@ -28,6 +30,13 @@ services:
       - FREE_ITEM_LIMIT=${FREE_ITEM_LIMIT:-200}
       - TRIAL_DAYS=${TRIAL_DAYS:-14}
       - APP_URL=${APP_URL:-}
+      - APP_NAME=${APP_NAME:-CardLedger}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_SECURE=${SMTP_SECURE:-}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_FROM=${SMTP_FROM:-}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
       - STRIPE_PRICE_ID=${STRIPE_PRICE_ID:-}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
@@ -78,3 +87,4 @@ networks:
 
 volumes:
   db_data:
+  storage:

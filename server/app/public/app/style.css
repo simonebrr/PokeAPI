@@ -186,3 +186,7 @@ textarea { min-height: 70px; resize: vertical; }
 .plans th, .plans td { padding: 7px 4px; border-bottom: 1px solid var(--border); text-align: center; }
 .plans td:first-child, .plans th:first-child { text-align: left; }
 .plans th:last-child, .plans td:last-child { font-weight: 600; }
+.banner.info { background: #e0e7ff; color: #1e1b4b; font-weight: 500; }
+.banner.info a { color: inherit; font-weight: 700; }
+label.check { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--text); margin: 4px 0 14px; }
+label.check input { width: auto; margin-top: 2px; }

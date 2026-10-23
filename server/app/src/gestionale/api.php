@@ -4,11 +4,18 @@
 
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/billing.php';
+require_once __DIR__ . '/account.php';
 
 const G_STATUSES = ['in_stock', 'listed', 'sold'];
 
 function g_json($data, int $status = 200): void
 {
+    if (defined('G_CLI')) {
+        if ($status >= 400) {
+            throw new RuntimeException($data['error'] ?? "errore $status");
+        }
+        return;
+    }
     http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode($data, JSON_UNESCAPED_UNICODE);
@@ -86,7 +93,7 @@ function g_user(): array
     if (empty($_SESSION['uid'])) {
         g_fail('Non autenticato', 401);
     }
-    $stmt = g_pdo()->prepare('SELECT id, workspace_id, name, email FROM g_users WHERE id = ?');
+    $stmt = g_pdo()->prepare('SELECT id, workspace_id, name, email, email_verified_at, referral_code FROM g_users WHERE id = ?');
     $stmt->execute([$_SESSION['uid']]);
     $u = $stmt->fetch();
     if (!$u) {
@@ -112,6 +119,11 @@ function g_register(): void
     if (strlen($password) < 8) {
         g_fail('La password deve avere almeno 8 caratteri');
     }
+    if (empty($b['accept_terms'])) {
+        g_fail('Devi accettare termini e privacy');
+    }
+    g_rate_limit('register', '', PHP_INT_MAX, 10, 60);
+    g_rate_hit('register', '');
     $pdo = g_pdo();
     $stmt = $pdo->prepare('SELECT id FROM g_users WHERE email = ?');
     $stmt->execute([$email]);
@@ -143,11 +155,14 @@ function g_register(): void
     }
     $pdo->prepare('INSERT INTO g_users (workspace_id, name, email, password_hash, created_at) VALUES (?, ?, ?, ?, ?)')
         ->execute([$workspaceId, $name, $email, password_hash($password, PASSWORD_DEFAULT), g_now()]);
-    $uid = $pdo->lastInsertId();
+    $uid = (int)$pdo->lastInsertId();
+    $pdo->prepare('UPDATE g_users SET referral_code = ? WHERE id = ?')->execute([g_invite_code(), $uid]);
     $pdo->commit();
 
+    g_send_verification($uid, $email, $name);
+    g_send_welcome($email, $name);
     session_regenerate_id(true);
-    $_SESSION['uid'] = (int)$uid;
+    $_SESSION['uid'] = $uid;
     g_me();
 }
 
@@ -155,12 +170,16 @@ function g_login(): void
 {
     $b = g_body();
     $email = strtolower(trim((string)($b['email'] ?? '')));
+    g_rate_limit('login', $email, 5, 20, 15);
     $stmt = g_pdo()->prepare('SELECT id, password_hash FROM g_users WHERE email = ?');
     $stmt->execute([$email]);
     $u = $stmt->fetch();
     if (!$u || !password_verify((string)($b['password'] ?? ''), $u['password_hash'])) {
+        g_rate_hit('login', $email);
         g_fail('Email o password errate', 401);
     }
+    g_rate_clear('login', $email);
+    g_pdo()->prepare('UPDATE g_users SET last_login_at = ? WHERE id = ?')->execute([g_now(), $u['id']]);
     session_regenerate_id(true);
     $_SESSION['uid'] = (int)$u['id'];
     g_me();
@@ -793,6 +812,12 @@ function g_route(string $method, array $seg): void
             case 'POST auth/login': g_login();
             case 'POST auth/logout': g_logout();
             case 'GET me': g_me();
+            case 'POST auth/forgot': g_forgot_password();
+            case 'POST auth/reset': g_reset_password();
+            case 'POST auth/verify': g_verify_email();
+            case 'POST auth/resend-verification': g_resend_verification();
+            case 'PUT account/password': g_change_password();
+            case 'DELETE account': g_delete_account();
             case 'PUT workspace': g_workspace_update();
             case 'POST workspace/join': g_workspace_join();
             case 'GET dashboard': g_dashboard();

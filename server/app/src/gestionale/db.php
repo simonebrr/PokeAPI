@@ -91,30 +91,69 @@ function g_migrate(PDO $pdo): void
     $version = (int)($pdo->query("SELECT v FROM g_meta WHERE k = 'schema'")->fetchColumn() ?: 1);
 
     if ($version < 2) {
-        // Abbonamenti (vendita del gestionale) e data aggiornamento prezzi.
-        $cols = [
+        g_add_columns($pdo, [
             ['g_workspaces', 'plan', "VARCHAR(20) NOT NULL DEFAULT 'trial'"],
             ['g_workspaces', 'trial_ends_at', 'DATETIME NULL'],
             ['g_workspaces', 'paid_until', 'DATETIME NULL'],
             ['g_workspaces', 'stripe_customer_id', 'VARCHAR(80) NULL'],
             ['g_workspaces', 'stripe_subscription_id', 'VARCHAR(80) NULL'],
             ['g_items', 'est_value_updated_at', 'DATETIME NULL'],
-        ];
-        foreach ($cols as [$table, $col, $def]) {
-            try {
-                $pdo->query("SELECT $col FROM $table LIMIT 1");
-            } catch (PDOException $e) {
-                $pdo->exec("ALTER TABLE $table ADD COLUMN $col $def");
-            }
-        }
+        ]);
         // I negozi già esistenti partono con una prova piena.
         $pdo->prepare('UPDATE g_workspaces SET trial_ends_at = ? WHERE trial_ends_at IS NULL')
             ->execute([date('Y-m-d H:i:s', time() + g_trial_days() * 86400)]);
+        g_set_schema($pdo, 2);
+    }
+
+    if ($version < 3) {
+        // Account: verifica email, recupero password, protezione login, inviti.
+        g_add_columns($pdo, [
+            ['g_users', 'email_verified_at', 'DATETIME NULL'],
+            ['g_users', 'last_login_at', 'DATETIME NULL'],
+            ['g_users', 'referral_code', 'VARCHAR(16) NULL'],
+            ['g_users', 'referred_by', 'INT NULL'],
+            ['g_workspaces', 'trial_reminder_sent_at', 'DATETIME NULL'],
+        ]);
+        $pdo->exec("CREATE TABLE IF NOT EXISTS g_tokens (
+            id $id,
+            user_id INT NOT NULL,
+            type VARCHAR(20) NOT NULL,
+            token_hash CHAR(64) NOT NULL UNIQUE,
+            expires_at DATETIME NOT NULL,
+            used_at DATETIME NULL,
+            created_at DATETIME NOT NULL
+        )");
+        $pdo->exec("CREATE TABLE IF NOT EXISTS g_login_attempts (
+            id $id,
+            ip VARCHAR(45) NOT NULL,
+            email VARCHAR(190) NOT NULL,
+            kind VARCHAR(20) NOT NULL,
+            created_at DATETIME NOT NULL
+        )");
+        // Gli utenti già esistenti sono considerati verificati.
+        $pdo->exec('UPDATE g_users SET email_verified_at = created_at WHERE email_verified_at IS NULL');
+        g_set_schema($pdo, 3);
+    }
+}
+
+function g_add_columns(PDO $pdo, array $cols): void
+{
+    foreach ($cols as [$table, $col, $def]) {
         try {
-            $pdo->exec("INSERT INTO g_meta (k, v) VALUES ('schema', '2')");
+            $pdo->query("SELECT $col FROM $table LIMIT 1");
         } catch (PDOException $e) {
-            // Un'altra richiesta concorrente ha già completato la migrazione.
+            $pdo->exec("ALTER TABLE $table ADD COLUMN $col $def");
         }
+    }
+}
+
+function g_set_schema(PDO $pdo, int $v): void
+{
+    try {
+        $pdo->exec("DELETE FROM g_meta WHERE k = 'schema'");
+        $pdo->exec("INSERT INTO g_meta (k, v) VALUES ('schema', '$v')");
+    } catch (PDOException $e) {
+        // Migrazione concorrente già completata da un'altra richiesta.
     }
 }
 
