@@ -10,7 +10,8 @@ services:
       - ./app:/var/www/html:cached
       - ./init.php:/var/www/html/init.php
       - ./apache-config.conf:/etc/apache2/sites-available/000-default.conf
-    command: bash -c "/usr/local/bin/php /var/www/html/init.php && cron && apache2-foreground"
+    command: bash -c "/usr/local/bin/php /var/www/html/init.php; cron && apache2-foreground"
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
@@ -32,10 +33,11 @@ services:
       MYSQL_USER: app_user
       MYSQL_PASSWORD: app_password
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "app_user", "-papp_password"]
       interval: 2s
       timeout: 20s
-      retries: 10
+      retries: 30
+      start_period: 30s
     volumes:
       - db_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
