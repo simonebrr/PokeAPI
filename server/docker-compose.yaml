@@ -17,7 +17,12 @@ services:
         condition: service_healthy
     environment:
       - APACHE_DOCUMENT_ROOT=/var/www/html/public
-      # Gestionale: valori presi dal file .env accanto a questo (vedi GESTIONALE.md)
+      # Valori presi dal file .env accanto a questo (copia .env.example)
+      - CARDTRADER_TOKEN=${CARDTRADER_TOKEN:-}
+      - DB_HOST=db
+      - DB_NAME=app_db
+      - DB_USER=app_user
+      - DB_PASSWORD=${DB_PASSWORD:-app_password}
       - ADMIN_EMAILS=${ADMIN_EMAILS:-}
       - PLAN_PRICE=${PLAN_PRICE:-4.99}
       - FREE_ITEM_LIMIT=${FREE_ITEM_LIMIT:-200}
@@ -37,12 +42,12 @@ services:
     ports:
       - "3307:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_password}
       MYSQL_DATABASE: app_db
       MYSQL_USER: app_user
-      MYSQL_PASSWORD: app_password
+      MYSQL_PASSWORD: ${DB_PASSWORD:-app_password}
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "app_user", "-papp_password"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u app_user -p\"$$MYSQL_PASSWORD\""]
       interval: 2s
       timeout: 20s
       retries: 30
@@ -59,7 +64,7 @@ services:
     environment:
       PMA_HOST: db # Nome del servizio MySQL a cui phpMyAdmin si connette
       PMA_PORT: 3306
-      MYSQL_ROOT_PASSWORD: root_password # La stessa password che hai usato per MySQL
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_password}
     ports:
       - "8081:80" # Porta per accedere a phpMyAdmin
     depends_on:

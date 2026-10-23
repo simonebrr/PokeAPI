@@ -1,5 +1,6 @@
 <?php
 
+require_once '/var/www/html/src/config.php';
 require_once '/var/www/html/src/PokemonDatabase.php';
 
 /**
@@ -12,14 +13,10 @@ require_once '/var/www/html/src/PokemonDatabase.php';
  */
 function fetchFromApi(string $url, string $tokenFilePath, array $queryParams = []): ?array
 {
-    // Carica il token dal file
-    if (!file_exists($tokenFilePath)) {
-        die("Il file $tokenFilePath non esiste.\n");
-    }
-    $token = trim(file_get_contents($tokenFilePath));
-
+    // Token da variabile d'ambiente CARDTRADER_TOKEN (vedi server/.env.example)
+    $token = cardtrader_token();
     if (!$token) {
-        die("Il token è vuoto. Assicurati che il file $tokenFilePath contenga un token valido.\n");
+        die("Token CardTrader mancante: imposta CARDTRADER_TOKEN nel file server/.env\n");
     }
 
     // Aggiungi i parametri query all'URL, se presenti

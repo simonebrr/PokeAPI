@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../config.php';
 // Connessione e schema del gestionale.
 // DSN configurabile via env (GESTIONALE_DSN), default: MySQL del docker-compose.
 
@@ -8,9 +9,10 @@ function g_pdo(): PDO
     if ($pdo) {
         return $pdo;
     }
-    $dsn  = getenv('GESTIONALE_DSN') ?: 'mysql:host=db;dbname=app_db;charset=utf8mb4';
-    $user = getenv('GESTIONALE_DB_USER') ?: 'app_user';
-    $pass = getenv('GESTIONALE_DB_PASSWORD') ?: 'app_password';
+    $c = db_config();
+    $dsn  = getenv('GESTIONALE_DSN') ?: "mysql:host={$c['host']};dbname={$c['name']};charset=utf8mb4";
+    $user = $c['user'];
+    $pass = $c['password'];
     $pdo = new PDO($dsn, $user, $pass, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,

@@ -1,10 +1,8 @@
 <?php
+require_once __DIR__ . '/config.php';
 try {
     // Parametri di connessione al database
-    $host = 'db';
-    $dbName = 'app_db';
-    $user = 'app_user';
-    $password = 'app_password';
+    ['host' => $host, 'name' => $dbName, 'user' => $user, 'password' => $password] = db_config();
     $dsn = "mysql:host=$host";
 
     // Connessione al database

@@ -566,10 +566,9 @@ function g_ct_image(?string $url): ?string
 
 function g_ct_get(string $path, array $query): array
 {
-    $tokenFile = getenv('CARDTRADER_TOKEN_FILE') ?: __DIR__ . '/../api/token.txt';
-    $token = getenv('CARDTRADER_TOKEN') ?: (is_file($tokenFile) ? trim(file_get_contents($tokenFile)) : '');
+    $token = cardtrader_token();
     if (!$token) {
-        g_fail('Token CardTrader non configurato', 503);
+        g_fail('Token CardTrader non configurato (CARDTRADER_TOKEN in server/.env)', 503);
     }
     $base = getenv('CARDTRADER_API_URL') ?: 'https://api.cardtrader.com/api/v2';
     $ch = curl_init($base . $path . '?' . http_build_query($query));

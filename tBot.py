@@ -1,11 +1,30 @@
 #https://t.me/PokePrice_bot
+import os
+from pathlib import Path
 from multiprocessing import context
 from typing import List, Optional
 import requests, re, time
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler
 import aiohttp # type: ignore
-TELEGRAM_BOT_TOKEN = "8077459438:AAGmeqc3ZLrJplrlXCfd27AXQspwWPkfHY0"
+def load_env(path: Path) -> None:
+    """Carica le variabili da server/.env (stesso file usato da docker-compose)."""
+    if not path.is_file():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            key, value = line.split("=", 1)
+            os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
+load_env(Path(__file__).resolve().parent / "server" / ".env")
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+
+
+def image_url(path: str) -> str:
+    """Le immagini possono essere già assolute o relative al sito CardTrader."""
+    return path if path.startswith("http") else "https://www.cardtrader.com" + path
 
 # Language mapping
 LANGUAGES = {
@@ -16,7 +35,7 @@ LANGUAGES = {
 CONDITION = ["Mint", "Near Mint", "Slightly Played", "Moderately Played", "Played", "Poor"]
 
 if not TELEGRAM_BOT_TOKEN:
-    raise ValueError("TELEGRAM_BOT_TOKEN environment variable is not set")
+    raise ValueError("TELEGRAM_BOT_TOKEN mancante: impostalo nel file server/.env")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_message = (
@@ -107,7 +126,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         
                         price_message = "\n".join(price_lines)
                         await query.message.reply_photo(
-                            photo="https://www.cardtrader.com"+data[0],
+                            photo=image_url(data[0]),
                             caption = price_message
                         )
                         
@@ -182,7 +201,7 @@ async def look_for(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await update.message.reply_text("Nessuna lingua disponibile per questa carta.")
                     return
                 await update.message.reply_photo(
-                    photo="https://www.cardtrader.com"+ data[0],
+                    photo=image_url(data[0]),
                     caption=f"Carta trovata!\nNome: {name.capitalize()}\nID: {try_card_id}\n\nSeleziona la lingua:",
                     reply_markup=reply_markup
                 )

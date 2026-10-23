@@ -1,16 +1,19 @@
 <?php
+require_once __DIR__ . '/config.php';
 
 class PokemonDatabase {
     private $pdo;
 
     // Parametri di connessione al database
-    private $host = 'db';
-    private $dbName = 'app_db';
-    private $user = 'app_user';
-    private $password = 'app_password';
+    private $host;
+    private $dbName;
+    private $user;
+    private $password;
 
     // Costruttore per la connessione al database
     public function __construct() {
+        $c = db_config();
+        [$this->host, $this->dbName, $this->user, $this->password] = [$c['host'], $c['name'], $c['user'], $c['password']];
         $dsn = "mysql:host={$this->host};dbname={$this->dbName}";
         try {
             // Connessione al database con PDO

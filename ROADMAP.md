@@ -7,7 +7,7 @@ Legenda priorità: 🔴 indispensabile · 🟠 importante · 🟢 utile
 
 ---
 
-## Fase 0 – Sicurezza (subito, ~1 ora)
+## Fase 0 – Sicurezza (subito, ~1 ora) – codice ✅, restano i passaggi manuali 0.1 e 0.2
 
 | # | Cosa | Perché | Priorità |
 |---|------|--------|----------|
