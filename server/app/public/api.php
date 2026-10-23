@@ -73,7 +73,7 @@ function fetch_expansion_single_cards($expansion_id, $database)
     if ($response) {
         foreach ($response as $card) {
             if ($card['category_id'] == 73) {
-                $database->insertSingleCard($card['id'], strtolower($card['name']), $card['expansion_id'], $card["image"]["show"]["url"], explode(" ", $card['fixed_properties']['collector_number'])[0]);
+                $database->insertSingleCard($card['id'], strtolower($card['name']), $card['expansion_id'], ($card['image_url'] ?? ('https://www.cardtrader.com' . ($card['image']['show']['url'] ?? ''))), explode(" ", $card['fixed_properties']['collector_number'])[0]);
 
                 if (count(array_filter($pokemons, function ($pokemon) use ($card) {
                     return $pokemon["name"] == strtolower($card['name']);

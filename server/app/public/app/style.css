@@ -157,3 +157,5 @@ textarea { min-height: 70px; resize: vertical; }
 .toast.error { background: var(--bad); }
 .hero-img { width: 100%; max-width: 220px; display: block; margin: 0 auto 12px; border-radius: 10px; }
 .code { font-family: ui-monospace, monospace; font-size: 22px; letter-spacing: 3px; font-weight: 700; }
+.thumb:not([src]), img.broken { display: inline-block; background: var(--chip) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ctext x='12' y='16' font-size='12' text-anchor='middle'%3E🃏%3C/text%3E%3C/svg%3E") center / 60% no-repeat; }
+.hero-img { max-height: 300px; object-fit: contain; }

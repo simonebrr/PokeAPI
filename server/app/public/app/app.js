@@ -340,10 +340,11 @@ async function itemForm(item, defaults, reload) {
   const opt = (list, cur, labels) => list.map((v) => `<option value="${esc(v)}" ${String(cur ?? '') === String(v) ? 'selected' : ''}>${esc(labels ? labels[v] : v)}</option>`).join('');
   openModal(item ? 'Modifica carta' : 'Aggiungi carta', `
     <form>
-      <div class="field"><label>Cerca nel catalogo (nome e numero, es. “charizard 4/102”)</label>
+      <div class="field"><label>Cerca nel catalogo (es. “ditto 63/113”) o incolla il link CardTrader</label>
         <input id="cat-q" type="search" placeholder="Cerca…" autocomplete="off"><div id="cat-res"></div></div>
       <input type="hidden" name="blueprint_id" value="${esc(i.blueprint_id ?? '')}">
       <input type="hidden" name="image_url" value="${esc(i.image_url ?? '')}">
+      <img id="img-preview" class="hero-img" alt="" ${i.image_url ? `src="${esc(i.image_url)}"` : 'hidden'}>
       <div class="field"><label>Nome carta *</label><input name="name" required value="${esc(i.name)}"></div>
       <div class="grid2">
         <div class="field"><label>Set / espansione</label><input name="set_name" value="${esc(i.set_name)}"></div>
@@ -378,6 +379,12 @@ async function itemForm(item, defaults, reload) {
     </form>`, (m) => {
     const form = m.querySelector('form');
     const f = (n) => form.elements[n];
+    const setImage = (url) => {
+      f('image_url').value = url || '';
+      const img = m.querySelector('#img-preview');
+      img.hidden = !url;
+      if (url) img.src = url; else img.removeAttribute('src');
+    };
     const sync = () => {
       m.querySelector('#sale-fields').hidden = f('status').value !== 'sold';
       m.querySelector('#cost-field').hidden = !!f('lot_id').value;
@@ -393,6 +400,15 @@ async function itemForm(item, defaults, reload) {
       clearTimeout(t);
       t = setTimeout(async () => {
         const q = e.target.value.trim();
+        // Link CardTrader incollato: es. cardtrader.com/en-EU/cards/115023-ditto-...
+        const link = q.match(/cardtrader\.com\/.*?cards\/(\d+)/i);
+        if (link) {
+          f('blueprint_id').value = link[1];
+          setImage('');
+          res.innerHTML = '<div class="small muted" style="padding:6px 2px">Link CardTrader riconosciuto ✓</div>';
+          fetchPrice();
+          return;
+        }
         if (q.length < 2) { res.innerHTML = ''; return; }
         const list = await api('catalog/search?q=' + encodeURIComponent(q)).catch(() => []);
         res.innerHTML = list.length
@@ -404,25 +420,35 @@ async function itemForm(item, defaults, reload) {
           f('set_name').value = c.set_name || '';
           f('card_number').value = c.card_number || '';
           f('blueprint_id').value = c.blueprint_id;
-          f('image_url').value = c.image_url || '';
+          setImage(c.image_url);
           res.innerHTML = '';
           m.querySelector('#cat-q').value = '';
         }));
       }, 300);
     });
 
-    m.querySelector('#price').addEventListener('click', (e) => guarded(e.target, async () => {
+    const fetchPrice = async () => {
       const out = m.querySelector('#price-out');
-      if (!f('blueprint_id').value) { out.textContent = 'Seleziona prima una carta dal catalogo'; return; }
+      if (!f('blueprint_id').value) { out.textContent = 'Cerca la carta nel catalogo o incolla il link CardTrader'; return; }
       out.textContent = 'Cerco…';
       const qs = new URLSearchParams({ blueprint_id: f('blueprint_id').value });
       if (f('language').value) qs.set('language', f('language').value);
       if (f('card_condition').value) qs.set('condition', f('card_condition').value);
-      const p = await api('catalog/price?' + qs);
-      if (!p.count) { out.textContent = 'Nessuna offerta trovata'; return; }
-      out.innerHTML = `min ${eur(p.min)} · mediana ${eur(p.median)} (${p.count} offerte)`;
+      if (!f('image_url').value) qs.set('with_image', '1');
+      let p;
+      try { p = await api('catalog/price?' + qs); } catch (err) { out.textContent = err.message; return; }
+      if (!f('name').value && p.name) f('name').value = p.name;
+      if (!f('set_name').value && p.set_name) f('set_name').value = p.set_name;
+      if (!f('card_number').value && p.card_number) f('card_number').value = p.card_number;
+      if (!f('image_url').value && p.image_url) setImage(p.image_url);
+      if (!p.count) { out.textContent = 'Nessuna offerta in vendita ora su CardTrader'; return; }
+      const notes = [];
+      if (f('language').value && !p.language_used) notes.push(`nessuna in ${f('language').value.toUpperCase()}: tutte le lingue`);
+      if (f('card_condition').value && !p.condition_used) notes.push('tutte le condizioni');
+      out.innerHTML = `min ${eur(p.min)} · mediana ${eur(p.median)} (${p.count} offerte)` + (notes.length ? `<br>${esc(notes.join(', '))}` : '');
       if (!f('est_value').value) f('est_value').value = p.min.toFixed(2);
-    }));
+    };
+    m.querySelector('#price').addEventListener('click', (e) => guarded(e.target, fetchPrice));
 
     form.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -519,6 +545,15 @@ async function router() {
     if (state.me) toast(e.message, true);
   }
 }
+
+// Immagine non caricabile: segnaposto invece dell'icona rotta.
+document.addEventListener('error', (e) => {
+  const img = e.target;
+  if (img.tagName !== 'IMG') return;
+  if (img.id === 'img-preview' || img.classList.contains('hero-img')) { img.hidden = true; return; }
+  img.removeAttribute('src');
+  img.classList.add('broken');
+}, true);
 
 window.addEventListener('hashchange', router);
 (async () => {

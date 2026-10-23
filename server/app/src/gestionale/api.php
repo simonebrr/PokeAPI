@@ -370,9 +370,7 @@ function g_item_fields(array $u, array $b): array
         'image_url' => g_str($b['image_url'] ?? null, 2048),
         'notes' => g_str($b['notes'] ?? null, 5000),
     ];
-    if ($f['image_url'] && !preg_match('#^https?://#i', $f['image_url'])) {
-        $f['image_url'] = null;
-    }
+    $f['image_url'] = g_ct_image($f['image_url']);
     if ($status === 'sold') {
         if ($f['sale_price'] === null) {
             g_fail('Inserisci il prezzo di vendita');
@@ -504,6 +502,67 @@ function g_dashboard(): void
 
 // ---------- Catalogo (dati CardTrader già importati) ----------
 
+// CardTrader restituisce spesso percorsi relativi ("/uploads/..."): li rende assoluti.
+function g_ct_image(?string $url): ?string
+{
+    if (!$url) {
+        return null;
+    }
+    if (str_starts_with($url, '//')) {
+        return 'https:' . $url;
+    }
+    if (str_starts_with($url, '/')) {
+        return 'https://www.cardtrader.com' . $url;
+    }
+    return preg_match('#^https?://#i', $url) ? $url : null;
+}
+
+function g_ct_get(string $path, array $query): array
+{
+    $tokenFile = getenv('CARDTRADER_TOKEN_FILE') ?: __DIR__ . '/../api/token.txt';
+    $token = getenv('CARDTRADER_TOKEN') ?: (is_file($tokenFile) ? trim(file_get_contents($tokenFile)) : '');
+    if (!$token) {
+        g_fail('Token CardTrader non configurato', 503);
+    }
+    $base = getenv('CARDTRADER_API_URL') ?: 'https://api.cardtrader.com/api/v2';
+    $ch = curl_init($base . $path . '?' . http_build_query($query));
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 15,
+        CURLOPT_HTTPHEADER => ["Authorization: Bearer $token"],
+    ]);
+    $resp = curl_exec($ch);
+    $http = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlErr = curl_error($ch);
+    curl_close($ch);
+    if ($resp === false || $http === 0) {
+        g_fail('CardTrader non raggiungibile: ' . $curlErr, 502);
+    }
+    if ($http === 401 || $http === 403) {
+        g_fail('Token CardTrader non valido o scaduto', 502);
+    }
+    if ($http !== 200) {
+        g_fail("CardTrader ha risposto con errore $http", 502);
+    }
+    $data = json_decode((string)$resp, true);
+    return is_array($data) ? $data : [];
+}
+
+// Immagine e numero della carta, dall'export dell'espansione (i prodotti non li includono).
+function g_ct_blueprint(int $bp, int $expansionId): array
+{
+    foreach (g_ct_get('/blueprints/export', ['expansion_id' => $expansionId]) as $b) {
+        if ((int)($b['id'] ?? 0) === $bp) {
+            return [
+                'image_url' => g_ct_image($b['image_url'] ?? ($b['image']['show']['url'] ?? null)),
+                'card_number' => isset($b['fixed_properties']['collector_number'])
+                    ? explode(' ', $b['fixed_properties']['collector_number'])[0] : null,
+            ];
+        }
+    }
+    return [];
+}
+
 function g_catalog_search(): void
 {
     g_user();
@@ -528,7 +587,11 @@ function g_catalog_search(): void
         }
         $stmt = g_pdo()->prepare($sql . ' ORDER BY s.name_en LIMIT 20');
         $stmt->execute($params);
-        g_json($stmt->fetchAll());
+        $rows = $stmt->fetchAll();
+        foreach ($rows as &$r) {
+            $r['image_url'] = g_ct_image($r['image_url']);
+        }
+        g_json($rows);
     } catch (PDOException $e) {
         g_json([]); // catalogo non ancora popolato
     }
@@ -541,44 +604,53 @@ function g_catalog_price(): void
     if (!$bp) {
         g_fail('blueprint_id mancante');
     }
-    $tokenFile = getenv('CARDTRADER_TOKEN_FILE') ?: __DIR__ . '/../api/token.txt';
-    $token = getenv('CARDTRADER_TOKEN') ?: (is_file($tokenFile) ? trim(file_get_contents($tokenFile)) : '');
-    if (!$token) {
-        g_fail('Token CardTrader non configurato', 503);
-    }
-    $ch = curl_init('https://api.cardtrader.com/api/v2/marketplace/products?' . http_build_query(['blueprint_id' => $bp]));
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 10,
-        CURLOPT_HTTPHEADER => ["Authorization: Bearer $token"],
-    ]);
-    $resp = curl_exec($ch);
-    curl_close($ch);
-    $data = json_decode((string)$resp, true);
-    $products = is_array($data) ? ($data[(string)$bp] ?? []) : [];
+    $data = g_ct_get('/marketplace/products', ['blueprint_id' => $bp]);
+    $products = $data[(string)$bp] ?? [];
+    // Esclude le carte gradate (PSA ecc.): falserebbero il prezzo della carta raw.
+    $products = array_values(array_filter($products, fn($p) => empty($p['graded'])));
 
-    $lang = $_GET['language'] ?? null;
-    $cond = $_GET['condition'] ?? null;
+    // Prova prima con lingua + condizione; se non ci sono offerte allarga i filtri.
+    $lang = g_str($_GET['language'] ?? null, 10);
+    $cond = g_str($_GET['condition'] ?? null, 40);
+    $attempts = [[$lang, $cond], [$lang, null], [null, $cond], [null, null]];
     $prices = [];
-    foreach ($products as $p) {
-        $props = $p['properties_hash'] ?? [];
-        if ($lang && isset($props['pokemon_language']) && $props['pokemon_language'] !== $lang) {
-            continue;
+    $used = [null, null];
+    foreach ($attempts as [$l, $c]) {
+        $prices = [];
+        foreach ($products as $p) {
+            $props = $p['properties_hash'] ?? [];
+            if ($l && ($props['pokemon_language'] ?? null) !== $l) {
+                continue;
+            }
+            if ($c && ($props['condition'] ?? null) !== $c) {
+                continue;
+            }
+            if (isset($p['price']['cents'])) {
+                $prices[] = $p['price']['cents'] / 100;
+            }
         }
-        if ($cond && isset($props['condition']) && $props['condition'] !== $cond) {
-            continue;
-        }
-        if (isset($p['price']['cents'])) {
-            $prices[] = $p['price']['cents'] / 100;
+        if ($prices) {
+            $used = [$l, $c];
+            break;
         }
     }
     sort($prices);
     $n = count($prices);
-    g_json([
+    $first = $products[0] ?? [];
+    $extra = [];
+    if (!empty($_GET['with_image']) && !empty($first['expansion']['id'])) {
+        $extra = g_ct_blueprint($bp, (int)$first['expansion']['id']);
+    }
+    g_json($extra + [
         'count' => $n,
+        'total_offers' => count($products),
         'min' => $n ? $prices[0] : null,
         'median' => $n ? $prices[intdiv($n, 2)] : null,
         'currency' => 'EUR',
+        'language_used' => $used[0],
+        'condition_used' => $used[1],
+        'name' => $first['name_en'] ?? null,
+        'set_name' => $first['expansion']['name_en'] ?? null,
     ]);
 }
 
