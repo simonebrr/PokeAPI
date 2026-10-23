@@ -1,0 +1,663 @@
+<?php
+// API JSON del gestionale: /api/...
+// Autenticazione con sessione PHP (cookie httpOnly). Ogni dato è isolato per workspace.
+
+require_once __DIR__ . '/db.php';
+
+const G_STATUSES = ['in_stock', 'listed', 'sold'];
+
+function g_json($data, int $status = 200): void
+{
+    http_response_code($status);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($data, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+function g_fail(string $msg, int $status = 400): void
+{
+    g_json(['error' => $msg], $status);
+}
+
+function g_body(): array
+{
+    $raw = file_get_contents('php://input');
+    if ($raw === '' || $raw === false) {
+        return [];
+    }
+    $data = json_decode($raw, true);
+    if (!is_array($data)) {
+        g_fail('JSON non valido');
+    }
+    return $data;
+}
+
+function g_now(): string
+{
+    return date('Y-m-d H:i:s');
+}
+
+function g_str($v, int $max = 190): ?string
+{
+    if ($v === null) {
+        return null;
+    }
+    $v = trim((string)$v);
+    return $v === '' ? null : mb_substr($v, 0, $max);
+}
+
+function g_money($v): ?float
+{
+    if ($v === null || $v === '') {
+        return null;
+    }
+    $v = str_replace(',', '.', (string)$v);
+    if (!is_numeric($v)) {
+        g_fail('Importo non valido: ' . $v);
+    }
+    return round((float)$v, 2);
+}
+
+function g_date($v): ?string
+{
+    $v = g_str($v, 10);
+    if ($v === null) {
+        return null;
+    }
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $v)) {
+        g_fail('Data non valida (usa AAAA-MM-GG)');
+    }
+    return $v;
+}
+
+function g_invite_code(): string
+{
+    $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    $code = '';
+    for ($i = 0; $i < 8; $i++) {
+        $code .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+    }
+    return $code;
+}
+
+function g_user(): array
+{
+    if (empty($_SESSION['uid'])) {
+        g_fail('Non autenticato', 401);
+    }
+    $stmt = g_pdo()->prepare('SELECT id, workspace_id, name, email FROM g_users WHERE id = ?');
+    $stmt->execute([$_SESSION['uid']]);
+    $u = $stmt->fetch();
+    if (!$u) {
+        session_destroy();
+        g_fail('Non autenticato', 401);
+    }
+    $u['id'] = (int)$u['id'];
+    $u['workspace_id'] = (int)$u['workspace_id'];
+    return $u;
+}
+
+// ---------- Auth ----------
+
+function g_register(): void
+{
+    $b = g_body();
+    $name = g_str($b['name'] ?? null, 120);
+    $email = strtolower((string)g_str($b['email'] ?? null));
+    $password = (string)($b['password'] ?? '');
+    if (!$name || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        g_fail('Nome ed email validi sono obbligatori');
+    }
+    if (strlen($password) < 8) {
+        g_fail('La password deve avere almeno 8 caratteri');
+    }
+    $pdo = g_pdo();
+    $stmt = $pdo->prepare('SELECT id FROM g_users WHERE email = ?');
+    $stmt->execute([$email]);
+    if ($stmt->fetch()) {
+        g_fail('Email già registrata', 409);
+    }
+
+    $pdo->beginTransaction();
+    $workspaceId = null;
+    $invite = g_str($b['invite_code'] ?? null, 16);
+    if ($invite) {
+        $stmt = $pdo->prepare('SELECT id FROM g_workspaces WHERE invite_code = ?');
+        $stmt->execute([strtoupper($invite)]);
+        $workspaceId = $stmt->fetchColumn();
+        if (!$workspaceId) {
+            $pdo->rollBack();
+            g_fail('Codice invito non valido', 404);
+        }
+    } else {
+        $pdo->prepare('INSERT INTO g_workspaces (name, invite_code, created_at) VALUES (?, ?, ?)')
+            ->execute(['Negozio di ' . $name, g_invite_code(), g_now()]);
+        $workspaceId = $pdo->lastInsertId();
+    }
+    $pdo->prepare('INSERT INTO g_users (workspace_id, name, email, password_hash, created_at) VALUES (?, ?, ?, ?, ?)')
+        ->execute([$workspaceId, $name, $email, password_hash($password, PASSWORD_DEFAULT), g_now()]);
+    $uid = $pdo->lastInsertId();
+    $pdo->commit();
+
+    session_regenerate_id(true);
+    $_SESSION['uid'] = (int)$uid;
+    g_me();
+}
+
+function g_login(): void
+{
+    $b = g_body();
+    $email = strtolower(trim((string)($b['email'] ?? '')));
+    $stmt = g_pdo()->prepare('SELECT id, password_hash FROM g_users WHERE email = ?');
+    $stmt->execute([$email]);
+    $u = $stmt->fetch();
+    if (!$u || !password_verify((string)($b['password'] ?? ''), $u['password_hash'])) {
+        g_fail('Email o password errate', 401);
+    }
+    session_regenerate_id(true);
+    $_SESSION['uid'] = (int)$u['id'];
+    g_me();
+}
+
+function g_logout(): void
+{
+    $_SESSION = [];
+    session_destroy();
+    g_json(['ok' => true]);
+}
+
+function g_me(): void
+{
+    $u = g_user();
+    $pdo = g_pdo();
+    $stmt = $pdo->prepare('SELECT id, name, invite_code FROM g_workspaces WHERE id = ?');
+    $stmt->execute([$u['workspace_id']]);
+    $ws = $stmt->fetch();
+    $stmt = $pdo->prepare('SELECT id, name, email FROM g_users WHERE workspace_id = ? ORDER BY id');
+    $stmt->execute([$u['workspace_id']]);
+    g_json(['user' => $u, 'workspace' => $ws, 'members' => $stmt->fetchAll()]);
+}
+
+function g_workspace_update(): void
+{
+    $u = g_user();
+    $name = g_str(g_body()['name'] ?? null, 120);
+    if (!$name) {
+        g_fail('Nome obbligatorio');
+    }
+    g_pdo()->prepare('UPDATE g_workspaces SET name = ? WHERE id = ?')->execute([$name, $u['workspace_id']]);
+    g_me();
+}
+
+function g_workspace_join(): void
+{
+    $u = g_user();
+    $code = strtoupper((string)g_str(g_body()['code'] ?? null, 16));
+    $stmt = g_pdo()->prepare('SELECT id FROM g_workspaces WHERE invite_code = ?');
+    $stmt->execute([$code]);
+    $wsId = $stmt->fetchColumn();
+    if (!$wsId) {
+        g_fail('Codice invito non valido', 404);
+    }
+    g_pdo()->prepare('UPDATE g_users SET workspace_id = ? WHERE id = ?')->execute([$wsId, $u['id']]);
+    g_me();
+}
+
+// ---------- Lotti ----------
+
+function g_lot_stats_sql(): string
+{
+    // Valore trovato = venduto (netto) + valore stimato dell'invenduto.
+    return "
+        SELECT l.*,
+            COALESCE(SUM(i.quantity), 0) AS cards,
+            COALESCE(SUM(CASE WHEN i.status = 'sold' THEN i.quantity ELSE 0 END), 0) AS cards_sold,
+            COALESCE(SUM(CASE WHEN i.status = 'sold' THEN i.sale_price - COALESCE(i.sale_fees, 0) ELSE 0 END), 0) AS revenue,
+            COALESCE(SUM(CASE WHEN i.status <> 'sold' THEN COALESCE(i.est_value, 0) * i.quantity ELSE 0 END), 0) AS stock_value
+        FROM g_lots l
+        LEFT JOIN g_items i ON i.lot_id = l.id
+    ";
+}
+
+function g_lot_format(array $l): array
+{
+    foreach (['id', 'workspace_id', 'created_by', 'cards', 'cards_sold'] as $k) {
+        $l[$k] = $l[$k] === null ? null : (int)$l[$k];
+    }
+    foreach (['cost', 'revenue', 'stock_value'] as $k) {
+        $l[$k] = round((float)$l[$k], 2);
+    }
+    $l['found_value'] = round($l['revenue'] + $l['stock_value'], 2);
+    $l['profit'] = round($l['revenue'] - $l['cost'], 2);
+    $l['roi'] = $l['cost'] > 0 ? round($l['found_value'] / $l['cost'], 2) : null;
+    return $l;
+}
+
+function g_lot_get(array $u, int $id): array
+{
+    $stmt = g_pdo()->prepare(g_lot_stats_sql() . ' WHERE l.id = ? AND l.workspace_id = ? GROUP BY l.id');
+    $stmt->execute([$id, $u['workspace_id']]);
+    $l = $stmt->fetch();
+    if (!$l) {
+        g_fail('Lotto non trovato', 404);
+    }
+    return g_lot_format($l);
+}
+
+function g_lots_list(): void
+{
+    $u = g_user();
+    $stmt = g_pdo()->prepare(g_lot_stats_sql() . ' WHERE l.workspace_id = ? GROUP BY l.id ORDER BY l.purchase_date DESC, l.id DESC');
+    $stmt->execute([$u['workspace_id']]);
+    g_json(array_map('g_lot_format', $stmt->fetchAll()));
+}
+
+function g_lot_fields(array $b): array
+{
+    $title = g_str($b['title'] ?? null);
+    if (!$title) {
+        g_fail('Il nome del lotto è obbligatorio');
+    }
+    return [
+        'title' => $title,
+        'purchase_date' => g_date($b['purchase_date'] ?? null),
+        'cost' => g_money($b['cost'] ?? 0) ?? 0,
+        'source' => g_str($b['source'] ?? null),
+        'notes' => g_str($b['notes'] ?? null, 5000),
+    ];
+}
+
+function g_lot_create(): void
+{
+    $u = g_user();
+    $f = g_lot_fields(g_body());
+    $pdo = g_pdo();
+    $pdo->prepare('INSERT INTO g_lots (workspace_id, title, purchase_date, cost, source, notes, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+        ->execute([$u['workspace_id'], $f['title'], $f['purchase_date'], $f['cost'], $f['source'], $f['notes'], $u['id'], g_now()]);
+    g_json(g_lot_get($u, (int)$pdo->lastInsertId()), 201);
+}
+
+function g_lot_show(int $id): void
+{
+    $u = g_user();
+    $lot = g_lot_get($u, $id);
+    $stmt = g_pdo()->prepare('SELECT * FROM g_items WHERE lot_id = ? AND workspace_id = ? ORDER BY est_value DESC, id DESC');
+    $stmt->execute([$id, $u['workspace_id']]);
+    $lot['items'] = array_map('g_item_format', $stmt->fetchAll());
+    g_json($lot);
+}
+
+function g_lot_update(int $id): void
+{
+    $u = g_user();
+    g_lot_get($u, $id);
+    $f = g_lot_fields(g_body());
+    g_pdo()->prepare('UPDATE g_lots SET title = ?, purchase_date = ?, cost = ?, source = ?, notes = ? WHERE id = ? AND workspace_id = ?')
+        ->execute([$f['title'], $f['purchase_date'], $f['cost'], $f['source'], $f['notes'], $id, $u['workspace_id']]);
+    g_json(g_lot_get($u, $id));
+}
+
+function g_lot_delete(int $id): void
+{
+    $u = g_user();
+    g_lot_get($u, $id);
+    $pdo = g_pdo();
+    $pdo->beginTransaction();
+    $pdo->prepare('DELETE FROM g_items WHERE lot_id = ? AND workspace_id = ?')->execute([$id, $u['workspace_id']]);
+    $pdo->prepare('DELETE FROM g_lots WHERE id = ? AND workspace_id = ?')->execute([$id, $u['workspace_id']]);
+    $pdo->commit();
+    g_json(['ok' => true]);
+}
+
+// ---------- Carte ----------
+
+function g_item_format(array $i): array
+{
+    foreach (['id', 'workspace_id', 'lot_id', 'blueprint_id', 'quantity', 'created_by'] as $k) {
+        $i[$k] = $i[$k] === null ? null : (int)$i[$k];
+    }
+    foreach (['purchase_cost', 'est_value', 'sale_price', 'sale_fees'] as $k) {
+        $i[$k] = $i[$k] === null ? null : round((float)$i[$k], 2);
+    }
+    return $i;
+}
+
+function g_item_get(array $u, int $id): array
+{
+    $stmt = g_pdo()->prepare('SELECT * FROM g_items WHERE id = ? AND workspace_id = ?');
+    $stmt->execute([$id, $u['workspace_id']]);
+    $i = $stmt->fetch();
+    if (!$i) {
+        g_fail('Carta non trovata', 404);
+    }
+    return g_item_format($i);
+}
+
+function g_item_fields(array $u, array $b): array
+{
+    $name = g_str($b['name'] ?? null);
+    if (!$name) {
+        g_fail('Il nome della carta è obbligatorio');
+    }
+    $lotId = isset($b['lot_id']) && $b['lot_id'] !== '' && $b['lot_id'] !== null ? (int)$b['lot_id'] : null;
+    if ($lotId) {
+        g_lot_get($u, $lotId);
+    }
+    $status = $b['status'] ?? 'in_stock';
+    if (!in_array($status, G_STATUSES, true)) {
+        g_fail('Stato non valido');
+    }
+    $qty = (int)($b['quantity'] ?? 1);
+    if ($qty < 1) {
+        g_fail('Quantità minima 1');
+    }
+    $f = [
+        'lot_id' => $lotId,
+        'blueprint_id' => !empty($b['blueprint_id']) ? (int)$b['blueprint_id'] : null,
+        'name' => $name,
+        'set_name' => g_str($b['set_name'] ?? null),
+        'card_number' => g_str($b['card_number'] ?? null, 50),
+        'language' => g_str($b['language'] ?? null, 10),
+        'card_condition' => g_str($b['card_condition'] ?? null, 40),
+        'quantity' => $qty,
+        'purchase_cost' => g_money($b['purchase_cost'] ?? null),
+        'est_value' => g_money($b['est_value'] ?? null),
+        'status' => $status,
+        'sale_price' => g_money($b['sale_price'] ?? null),
+        'sale_fees' => g_money($b['sale_fees'] ?? null),
+        'sale_date' => g_date($b['sale_date'] ?? null),
+        'sale_channel' => g_str($b['sale_channel'] ?? null, 80),
+        'image_url' => g_str($b['image_url'] ?? null, 2048),
+        'notes' => g_str($b['notes'] ?? null, 5000),
+    ];
+    if ($f['image_url'] && !preg_match('#^https?://#i', $f['image_url'])) {
+        $f['image_url'] = null;
+    }
+    if ($status === 'sold') {
+        if ($f['sale_price'] === null) {
+            g_fail('Inserisci il prezzo di vendita');
+        }
+        $f['sale_date'] = $f['sale_date'] ?? date('Y-m-d');
+    }
+    return $f;
+}
+
+function g_items_list(): void
+{
+    $u = g_user();
+    $where = ['i.workspace_id = ?'];
+    $params = [$u['workspace_id']];
+    if (!empty($_GET['status']) && in_array($_GET['status'], G_STATUSES, true)) {
+        $where[] = 'i.status = ?';
+        $params[] = $_GET['status'];
+    } elseif (($_GET['status'] ?? '') === 'unsold') {
+        $where[] = "i.status <> 'sold'";
+    }
+    if (!empty($_GET['lot_id'])) {
+        $where[] = 'i.lot_id = ?';
+        $params[] = (int)$_GET['lot_id'];
+    }
+    if (!empty($_GET['q'])) {
+        $where[] = '(LOWER(i.name) LIKE ? OR LOWER(i.set_name) LIKE ? OR i.card_number LIKE ?)';
+        $q = '%' . mb_strtolower(trim($_GET['q'])) . '%';
+        array_push($params, $q, $q, $q);
+    }
+    $order = ($_GET['status'] ?? '') === 'sold' ? 'i.sale_date DESC, i.id DESC' : 'i.est_value DESC, i.id DESC';
+    $stmt = g_pdo()->prepare('SELECT i.*, l.title AS lot_title FROM g_items i LEFT JOIN g_lots l ON l.id = i.lot_id WHERE '
+        . implode(' AND ', $where) . " ORDER BY $order LIMIT 1000");
+    $stmt->execute($params);
+    g_json(array_map('g_item_format', $stmt->fetchAll()));
+}
+
+function g_item_create(): void
+{
+    $u = g_user();
+    $f = g_item_fields($u, g_body());
+    $cols = array_keys($f);
+    $pdo = g_pdo();
+    $sql = 'INSERT INTO g_items (workspace_id, created_by, created_at, ' . implode(', ', $cols) . ') VALUES (?, ?, ?, '
+        . implode(', ', array_fill(0, count($cols), '?')) . ')';
+    $pdo->prepare($sql)->execute(array_merge([$u['workspace_id'], $u['id'], g_now()], array_values($f)));
+    g_json(g_item_get($u, (int)$pdo->lastInsertId()), 201);
+}
+
+function g_item_update(int $id): void
+{
+    $u = g_user();
+    $current = g_item_get($u, $id);
+    // Aggiornamento parziale: i campi non inviati restano come sono.
+    $f = g_item_fields($u, array_merge($current, g_body()));
+    if ($f['status'] !== 'sold') {
+        $f['sale_price'] = $f['sale_fees'] = $f['sale_date'] = $f['sale_channel'] = null;
+    }
+    $set = implode(', ', array_map(fn($c) => "$c = ?", array_keys($f)));
+    g_pdo()->prepare("UPDATE g_items SET $set WHERE id = ? AND workspace_id = ?")
+        ->execute(array_merge(array_values($f), [$id, $u['workspace_id']]));
+    g_json(g_item_get($u, $id));
+}
+
+function g_item_delete(int $id): void
+{
+    $u = g_user();
+    g_item_get($u, $id);
+    g_pdo()->prepare('DELETE FROM g_items WHERE id = ? AND workspace_id = ?')->execute([$id, $u['workspace_id']]);
+    g_json(['ok' => true]);
+}
+
+// ---------- Dashboard ----------
+
+function g_dashboard(): void
+{
+    $u = g_user();
+    $pdo = g_pdo();
+    $ws = $u['workspace_id'];
+
+    $stmt = $pdo->prepare('SELECT COALESCE(SUM(cost), 0) AS lots_cost, COUNT(*) AS lots FROM g_lots WHERE workspace_id = ?');
+    $stmt->execute([$ws]);
+    $lots = $stmt->fetch();
+
+    $stmt = $pdo->prepare("
+        SELECT
+            COALESCE(SUM(CASE WHEN lot_id IS NULL THEN COALESCE(purchase_cost, 0) * quantity ELSE 0 END), 0) AS singles_cost,
+            COALESCE(SUM(CASE WHEN status = 'sold' THEN sale_price - COALESCE(sale_fees, 0) ELSE 0 END), 0) AS revenue,
+            COALESCE(SUM(CASE WHEN status <> 'sold' THEN COALESCE(est_value, 0) * quantity ELSE 0 END), 0) AS stock_value,
+            COALESCE(SUM(CASE WHEN status <> 'sold' THEN quantity ELSE 0 END), 0) AS cards_in_stock,
+            COALESCE(SUM(CASE WHEN status = 'listed' THEN quantity ELSE 0 END), 0) AS cards_listed,
+            COALESCE(SUM(CASE WHEN status = 'sold' THEN quantity ELSE 0 END), 0) AS cards_sold
+        FROM g_items WHERE workspace_id = ?
+    ");
+    $stmt->execute([$ws]);
+    $it = $stmt->fetch();
+
+    $spent = (float)$lots['lots_cost'] + (float)$it['singles_cost'];
+    $revenue = (float)$it['revenue'];
+    $stock = (float)$it['stock_value'];
+
+    $stmt = $pdo->prepare("SELECT * FROM g_items WHERE workspace_id = ? AND status <> 'sold' ORDER BY est_value DESC LIMIT 5");
+    $stmt->execute([$ws]);
+    $top = array_map('g_item_format', $stmt->fetchAll());
+
+    $stmt = $pdo->prepare("SELECT * FROM g_items WHERE workspace_id = ? AND status = 'sold' ORDER BY sale_date DESC, id DESC LIMIT 5");
+    $stmt->execute([$ws]);
+    $recent = array_map('g_item_format', $stmt->fetchAll());
+
+    $stmt = $pdo->prepare(g_lot_stats_sql() . ' WHERE l.workspace_id = ? GROUP BY l.id');
+    $stmt->execute([$ws]);
+    $allLots = array_map('g_lot_format', $stmt->fetchAll());
+    usort($allLots, fn($a, $b) => ($b['roi'] ?? 0) <=> ($a['roi'] ?? 0));
+
+    g_json([
+        'spent' => round($spent, 2),
+        'revenue' => round($revenue, 2),
+        'stock_value' => round($stock, 2),
+        'balance' => round($revenue - $spent, 2),
+        'potential' => round($revenue + $stock - $spent, 2),
+        'lots' => (int)$lots['lots'],
+        'cards_in_stock' => (int)$it['cards_in_stock'],
+        'cards_listed' => (int)$it['cards_listed'],
+        'cards_sold' => (int)$it['cards_sold'],
+        'top_items' => $top,
+        'recent_sales' => $recent,
+        'best_lots' => array_slice($allLots, 0, 5),
+    ]);
+}
+
+// ---------- Catalogo (dati CardTrader già importati) ----------
+
+function g_catalog_search(): void
+{
+    g_user();
+    $q = mb_strtolower(trim((string)($_GET['q'] ?? '')));
+    if (mb_strlen($q) < 2) {
+        g_json([]);
+    }
+    // Supporta "pikachu 25/102": l'ultimo token con cifre è il numero carta.
+    $number = null;
+    if (preg_match('/^(.*?)\s+(\S*\d\S*)$/u', $q, $m)) {
+        $q = trim($m[1]);
+        $number = $m[2];
+    }
+    try {
+        $sql = 'SELECT s.blueprint_id, s.name_en AS name, s.collector_number AS card_number, s.image_url, e.name AS set_name
+                FROM single_cards s LEFT JOIN expansions e ON e.id = s.expansion_id
+                WHERE s.name_en LIKE ?';
+        $params = ['%' . $q . '%'];
+        if ($number !== null) {
+            $sql .= ' AND s.collector_number LIKE ?';
+            $params[] = $number . '%';
+        }
+        $stmt = g_pdo()->prepare($sql . ' ORDER BY s.name_en LIMIT 20');
+        $stmt->execute($params);
+        g_json($stmt->fetchAll());
+    } catch (PDOException $e) {
+        g_json([]); // catalogo non ancora popolato
+    }
+}
+
+function g_catalog_price(): void
+{
+    g_user();
+    $bp = (int)($_GET['blueprint_id'] ?? 0);
+    if (!$bp) {
+        g_fail('blueprint_id mancante');
+    }
+    $tokenFile = getenv('CARDTRADER_TOKEN_FILE') ?: __DIR__ . '/../api/token.txt';
+    $token = getenv('CARDTRADER_TOKEN') ?: (is_file($tokenFile) ? trim(file_get_contents($tokenFile)) : '');
+    if (!$token) {
+        g_fail('Token CardTrader non configurato', 503);
+    }
+    $ch = curl_init('https://api.cardtrader.com/api/v2/marketplace/products?' . http_build_query(['blueprint_id' => $bp]));
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 10,
+        CURLOPT_HTTPHEADER => ["Authorization: Bearer $token"],
+    ]);
+    $resp = curl_exec($ch);
+    curl_close($ch);
+    $data = json_decode((string)$resp, true);
+    $products = is_array($data) ? ($data[(string)$bp] ?? []) : [];
+
+    $lang = $_GET['language'] ?? null;
+    $cond = $_GET['condition'] ?? null;
+    $prices = [];
+    foreach ($products as $p) {
+        $props = $p['properties_hash'] ?? [];
+        if ($lang && isset($props['pokemon_language']) && $props['pokemon_language'] !== $lang) {
+            continue;
+        }
+        if ($cond && isset($props['condition']) && $props['condition'] !== $cond) {
+            continue;
+        }
+        if (isset($p['price']['cents'])) {
+            $prices[] = $p['price']['cents'] / 100;
+        }
+    }
+    sort($prices);
+    $n = count($prices);
+    g_json([
+        'count' => $n,
+        'min' => $n ? $prices[0] : null,
+        'median' => $n ? $prices[intdiv($n, 2)] : null,
+        'currency' => 'EUR',
+    ]);
+}
+
+// ---------- Export ----------
+
+function g_export_csv(): void
+{
+    $u = g_user();
+    $stmt = g_pdo()->prepare('SELECT i.*, l.title AS lot_title FROM g_items i LEFT JOIN g_lots l ON l.id = i.lot_id WHERE i.workspace_id = ? ORDER BY i.id');
+    $stmt->execute([$u['workspace_id']]);
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="carte.csv"');
+    $out = fopen('php://output', 'w');
+    fwrite($out, "\xEF\xBB\xBF"); // BOM per Excel
+    $cols = ['id', 'lot_title', 'name', 'set_name', 'card_number', 'language', 'card_condition', 'quantity',
+        'purchase_cost', 'est_value', 'status', 'sale_price', 'sale_fees', 'sale_date', 'sale_channel', 'notes'];
+    fputcsv($out, $cols, ';');
+    while ($row = $stmt->fetch()) {
+        $line = [];
+        foreach ($cols as $c) {
+            $v = (string)($row[$c] ?? '');
+            // Evita formula injection in Excel
+            if ($v !== '' && strpos('=+-@', $v[0]) !== false && !is_numeric($v)) {
+                $v = "'" . $v;
+            }
+            $line[] = $v;
+        }
+        fputcsv($out, $line, ';');
+    }
+    exit;
+}
+
+// ---------- Router ----------
+
+function g_route(string $method, array $seg): void
+{
+    session_set_cookie_params([
+        'httponly' => true,
+        'samesite' => 'Lax',
+        'secure' => !empty($_SERVER['HTTPS']),
+        'lifetime' => 60 * 60 * 24 * 30,
+    ]);
+    session_start();
+
+    // Le scritture accettano solo JSON: blocca form cross-site (CSRF).
+    if (in_array($method, ['POST', 'PUT', 'DELETE'], true)
+        && stripos($_SERVER['CONTENT_TYPE'] ?? '', 'application/json') !== 0) {
+        g_fail('Content-Type deve essere application/json', 415);
+    }
+
+    try {
+        $r = $seg[0] ?? '';
+        $id = isset($seg[1]) && ctype_digit($seg[1]) ? (int)$seg[1] : null;
+        $key = $method . ' ' . $r . ($id !== null ? '/:id' : (isset($seg[1]) ? '/' . $seg[1] : ''));
+
+        switch ($key) {
+            case 'POST auth/register': g_register();
+            case 'POST auth/login': g_login();
+            case 'POST auth/logout': g_logout();
+            case 'GET me': g_me();
+            case 'PUT workspace': g_workspace_update();
+            case 'POST workspace/join': g_workspace_join();
+            case 'GET dashboard': g_dashboard();
+            case 'GET lots': g_lots_list();
+            case 'POST lots': g_lot_create();
+            case 'GET lots/:id': g_lot_show($id);
+            case 'PUT lots/:id': g_lot_update($id);
+            case 'DELETE lots/:id': g_lot_delete($id);
+            case 'GET items': g_items_list();
+            case 'POST items': g_item_create();
+            case 'PUT items/:id': g_item_update($id);
+            case 'DELETE items/:id': g_item_delete($id);
+            case 'GET catalog/search': g_catalog_search();
+            case 'GET catalog/price': g_catalog_price();
+            case 'GET export/items.csv': g_export_csv();
+        }
+        g_fail('Endpoint non trovato', 404);
+    } catch (PDOException $e) {
+        error_log('[gestionale] ' . $e->getMessage());
+        g_fail('Errore database', 500);
+    }
+}

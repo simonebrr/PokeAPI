@@ -1,0 +1,9 @@
+{
+  "name": "CardLedger",
+  "short_name": "CardLedger",
+  "start_url": "/app/",
+  "display": "standalone",
+  "background_color": "#f5f6fa",
+  "theme_color": "#1f2a44",
+  "lang": "it"
+}

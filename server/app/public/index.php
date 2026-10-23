@@ -1,10 +1,21 @@
 <?php
-header("Content-Type: application/json");
-
 $method = $_SERVER['REQUEST_METHOD'];
-$path = trim($_SERVER['REQUEST_URI'], '/');
+$path = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
 
 $segments = explode('/', $path);
+
+if ($segments[0] === 'api') {
+    // Gestionale compravendita carte
+    require_once __DIR__ . '/../src/gestionale/api.php';
+    g_route($method, array_slice($segments, 1));
+}
+
+if ($path === '') {
+    header('Location: /app/');
+    exit;
+}
+
+header("Content-Type: application/json");
 
 if ($segments[0] === 'card') {
     require_once '../src/api/single_cards.php';
