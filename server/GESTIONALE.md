@@ -36,10 +36,17 @@ Nuovi negozi: `TRIAL_DAYS` (14) giorni di Premium in prova (30 se invitati), poi
 Visibile agli utenti in `ADMIN_EMAILS` (o al primo registrato). Mostra entrate mensili, negozi per piano,
 conversione, nuovi utenti, imbuto di attivazione, uso delle funzioni; permette di attivare Premium a mano.
 
-## Pull rate (Sbusto o rivendo?)
-Valori di default indicativi della community (ere Scarlatto e Violetto, Spada e Scudo), in `src/gestionale/sealed.php`.
-Il proprietario li può correggere set per set direttamente dalla pagina (tabella "Pull rate per rarità").
-Le rarità senza pull rate non vengono conteggiate e sono elencate sotto la tabella. Dati CardTrader in cache 6 ore.
+## Pull rate (Sbusto o rivendo?) e sbustamenti registrati
+- **Stime di partenza**: valori indicativi della community (ere Scarlatto e Violetto, Spada e Scudo) in
+  `src/gestionale/sealed.php`; il proprietario li corregge set per set dalla tabella "Pull rate per rarità"
+  (es. con i dati TCGplayer quando esce un set).
+- **Dati reali**: gli utenti registrano gli sbustamenti (Lotti → "I miei sbustamenti", gratis per tutti),
+  segnando le carte più rare di una Rara normale. Le hit possono finire nel magazzino come nuovo lotto.
+- **Calcolo**: `pull rate = (hit community + stima × K) / (bustine community + K)`, con K = 300 per le stime
+  di default e 1000 per quelle del proprietario. Con poche bustine prevale la stima, con migliaia i dati reali.
+- **Qualità**: contano solo le registrazioni confermate come complete; limiti di 360 bustine per registrazione,
+  3 carte speciali per bustina e 30 registrazioni al giorno; il proprietario può escludere quelle sospette
+  dal pannello Admin.
 
 ## Pagamenti
 ### PayPal (consigliato per iniziare)
