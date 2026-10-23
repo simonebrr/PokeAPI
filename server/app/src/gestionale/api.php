@@ -3,6 +3,7 @@
 // Autenticazione con sessione PHP (cookie httpOnly). Ogni dato è isolato per workspace.
 
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/billing.php';
 
 const G_STATUSES = ['in_stock', 'listed', 'sold'];
 
@@ -129,9 +130,15 @@ function g_register(): void
             $pdo->rollBack();
             g_fail('Codice invito non valido', 404);
         }
+        $members = $pdo->prepare('SELECT COUNT(*) FROM g_users WHERE workspace_id = ?');
+        $members->execute([$workspaceId]);
+        if ((int)$members->fetchColumn() >= 1 && !g_is_premium((int)$workspaceId)) {
+            $pdo->rollBack();
+            g_check_can_add_member((int)$workspaceId); // risponde con l'errore Premium
+        }
     } else {
-        $pdo->prepare('INSERT INTO g_workspaces (name, invite_code, created_at) VALUES (?, ?, ?)')
-            ->execute(['Negozio di ' . $name, g_invite_code(), g_now()]);
+        $pdo->prepare("INSERT INTO g_workspaces (name, invite_code, created_at, plan, trial_ends_at) VALUES (?, ?, ?, 'trial', ?)")
+            ->execute(['Negozio di ' . $name, g_invite_code(), g_now(), date('Y-m-d H:i:s', time() + g_trial_days() * 86400)]);
         $workspaceId = $pdo->lastInsertId();
     }
     $pdo->prepare('INSERT INTO g_users (workspace_id, name, email, password_hash, created_at) VALUES (?, ?, ?, ?, ?)')
@@ -175,7 +182,8 @@ function g_me(): void
     $ws = $stmt->fetch();
     $stmt = $pdo->prepare('SELECT id, name, email FROM g_users WHERE workspace_id = ? ORDER BY id');
     $stmt->execute([$u['workspace_id']]);
-    g_json(['user' => $u, 'workspace' => $ws, 'members' => $stmt->fetchAll()]);
+    $u['is_admin'] = g_is_admin($u);
+    g_json(['user' => $u, 'workspace' => $ws, 'members' => $stmt->fetchAll(), 'billing' => g_billing_info($u)]);
 }
 
 function g_workspace_update(): void
@@ -199,6 +207,7 @@ function g_workspace_join(): void
     if (!$wsId) {
         g_fail('Codice invito non valido', 404);
     }
+    g_check_can_add_member((int)$wsId);
     g_pdo()->prepare('UPDATE g_users SET workspace_id = ? WHERE id = ?')->execute([$wsId, $u['id']]);
     g_me();
 }
@@ -410,6 +419,7 @@ function g_items_list(): void
 function g_item_create(): void
 {
     $u = g_user();
+    g_check_item_limit($u);
     $f = g_item_fields($u, g_body());
     $cols = array_keys($f);
     $pdo = g_pdo();
@@ -425,6 +435,9 @@ function g_item_update(int $id): void
     $current = g_item_get($u, $id);
     // Aggiornamento parziale: i campi non inviati restano come sono.
     $f = g_item_fields($u, array_merge($current, g_body()));
+    if ($current['status'] === 'sold' && $f['status'] !== 'sold') {
+        g_check_item_limit($u);
+    }
     if ($f['status'] !== 'sold') {
         $f['sale_price'] = $f['sale_fees'] = $f['sale_date'] = $f['sale_channel'] = null;
     }
@@ -497,7 +510,41 @@ function g_dashboard(): void
         'top_items' => $top,
         'recent_sales' => $recent,
         'best_lots' => array_slice($allLots, 0, 5),
+        'months' => g_is_premium($ws) ? g_monthly($ws) : null,
     ]);
+}
+
+// Incassi netti e spese per mese (ultimi 12 mesi).
+function g_monthly(int $ws): array
+{
+    $months = [];
+    for ($i = 11; $i >= 0; $i--) {
+        $months[date('Y-m', strtotime("first day of -$i month"))] = ['revenue' => 0.0, 'spent' => 0.0];
+    }
+    $pdo = g_pdo();
+    $queries = [
+        'revenue' => "SELECT SUBSTR(sale_date, 1, 7) AS m, SUM(sale_price - COALESCE(sale_fees, 0)) AS v
+                      FROM g_items WHERE workspace_id = ? AND status = 'sold' AND sale_date IS NOT NULL GROUP BY SUBSTR(sale_date, 1, 7)",
+        'spent_lots' => 'SELECT SUBSTR(COALESCE(purchase_date, created_at), 1, 7) AS m, SUM(cost) AS v
+                      FROM g_lots WHERE workspace_id = ? GROUP BY SUBSTR(COALESCE(purchase_date, created_at), 1, 7)',
+        'spent_items' => 'SELECT SUBSTR(created_at, 1, 7) AS m, SUM(COALESCE(purchase_cost, 0) * quantity) AS v
+                      FROM g_items WHERE workspace_id = ? AND lot_id IS NULL GROUP BY SUBSTR(created_at, 1, 7)',
+    ];
+    foreach ($queries as $key => $sql) {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$ws]);
+        foreach ($stmt->fetchAll() as $r) {
+            if (isset($months[$r['m']])) {
+                $months[$r['m']][$key === 'revenue' ? 'revenue' : 'spent'] += (float)$r['v'];
+            }
+        }
+    }
+    $out = [];
+    foreach ($months as $m => $v) {
+        $out[] = ['month' => $m, 'revenue' => round($v['revenue'], 2), 'spent' => round($v['spent'], 2),
+            'profit' => round($v['revenue'] - $v['spent'], 2)];
+    }
+    return $out;
 }
 
 // ---------- Catalogo (dati CardTrader già importati) ----------
@@ -597,21 +644,14 @@ function g_catalog_search(): void
     }
 }
 
-function g_catalog_price(): void
+// Prezzo di mercato attuale: prova lingua + condizione, poi allarga i filtri.
+function g_ct_price(int $bp, ?string $lang, ?string $cond, bool $withImage): array
 {
-    g_user();
-    $bp = (int)($_GET['blueprint_id'] ?? 0);
-    if (!$bp) {
-        g_fail('blueprint_id mancante');
-    }
     $data = g_ct_get('/marketplace/products', ['blueprint_id' => $bp]);
     $products = $data[(string)$bp] ?? [];
     // Esclude le carte gradate (PSA ecc.): falserebbero il prezzo della carta raw.
     $products = array_values(array_filter($products, fn($p) => empty($p['graded'])));
 
-    // Prova prima con lingua + condizione; se non ci sono offerte allarga i filtri.
-    $lang = g_str($_GET['language'] ?? null, 10);
-    $cond = g_str($_GET['condition'] ?? null, 40);
     $attempts = [[$lang, $cond], [$lang, null], [null, $cond], [null, null]];
     $prices = [];
     $used = [null, null];
@@ -638,10 +678,10 @@ function g_catalog_price(): void
     $n = count($prices);
     $first = $products[0] ?? [];
     $extra = [];
-    if (!empty($_GET['with_image']) && !empty($first['expansion']['id'])) {
+    if ($withImage && !empty($first['expansion']['id'])) {
         $extra = g_ct_blueprint($bp, (int)$first['expansion']['id']);
     }
-    g_json($extra + [
+    return $extra + [
         'count' => $n,
         'total_offers' => count($products),
         'min' => $n ? $prices[0] : null,
@@ -651,7 +691,37 @@ function g_catalog_price(): void
         'condition_used' => $used[1],
         'name' => $first['name_en'] ?? null,
         'set_name' => $first['expansion']['name_en'] ?? null,
-    ]);
+    ];
+}
+
+function g_catalog_price(): void
+{
+    g_user();
+    $bp = (int)($_GET['blueprint_id'] ?? 0);
+    if (!$bp) {
+        g_fail('blueprint_id mancante');
+    }
+    g_json(g_ct_price($bp, g_str($_GET['language'] ?? null, 10), g_str($_GET['condition'] ?? null, 40), !empty($_GET['with_image'])));
+}
+
+// Aggiornamento valore di una carta (usato dall'aggiornamento in blocco).
+function g_item_refresh_price(int $id): void
+{
+    $u = g_user();
+    g_require_premium($u, "L'aggiornamento valori in blocco");
+    $item = g_item_get($u, $id);
+    if (!$item['blueprint_id']) {
+        g_json(['id' => $id, 'skipped' => 'no_catalog', 'old' => $item['est_value'], 'new' => $item['est_value']]);
+    }
+    $strategy = (g_body()['strategy'] ?? 'min') === 'median' ? 'median' : 'min';
+    $p = g_ct_price($item['blueprint_id'], $item['language'], $item['card_condition'], !$item['image_url']);
+    if (!$p['count']) {
+        g_json(['id' => $id, 'skipped' => 'no_offers', 'old' => $item['est_value'], 'new' => $item['est_value']]);
+    }
+    $new = round((float)$p[$strategy], 2);
+    g_pdo()->prepare('UPDATE g_items SET est_value = ?, est_value_updated_at = ?, image_url = COALESCE(image_url, ?) WHERE id = ? AND workspace_id = ?')
+        ->execute([$new, g_now(), $p['image_url'] ?? null, $id, $u['workspace_id']]);
+    g_json(['id' => $id, 'old' => $item['est_value'], 'new' => $new, 'quantity' => $item['quantity']]);
 }
 
 // ---------- Export ----------
@@ -695,6 +765,11 @@ function g_route(string $method, array $seg): void
     ]);
     session_start();
 
+    // Webhook Stripe: nessuna sessione, verificato con la firma.
+    if ($method === 'POST' && implode('/', $seg) === 'billing/webhook') {
+        g_billing_webhook();
+    }
+
     // Le scritture accettano solo JSON: blocca form cross-site (CSRF).
     if (in_array($method, ['POST', 'PUT', 'DELETE'], true)
         && stripos($_SERVER['CONTENT_TYPE'] ?? '', 'application/json') !== 0) {
@@ -702,9 +777,17 @@ function g_route(string $method, array $seg): void
     }
 
     try {
-        $r = $seg[0] ?? '';
-        $id = isset($seg[1]) && ctype_digit($seg[1]) ? (int)$seg[1] : null;
-        $key = $method . ' ' . $r . ($id !== null ? '/:id' : (isset($seg[1]) ? '/' . $seg[1] : ''));
+        // Es. "PUT items/12" -> chiave "PUT items/:id", $id = 12
+        $id = null;
+        $parts = [];
+        foreach (array_filter($seg, 'strlen') as $part) {
+            if (ctype_digit($part) && $id === null) {
+                $id = (int)$part;
+                $part = ':id';
+            }
+            $parts[] = $part;
+        }
+        $key = $method . ' ' . implode('/', $parts);
 
         switch ($key) {
             case 'POST auth/register': g_register();
@@ -726,6 +809,11 @@ function g_route(string $method, array $seg): void
             case 'GET catalog/search': g_catalog_search();
             case 'GET catalog/price': g_catalog_price();
             case 'GET export/items.csv': g_export_csv();
+            case 'POST items/:id/refresh-price': g_item_refresh_price($id);
+            case 'POST billing/checkout': g_billing_checkout();
+            case 'POST billing/portal': g_billing_portal();
+            case 'GET admin/overview': g_admin_overview();
+            case 'PUT admin/workspaces/:id': g_admin_workspace_update($id);
         }
         g_fail('Endpoint non trovato', 404);
     } catch (PDOException $e) {

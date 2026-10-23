@@ -17,6 +17,15 @@ services:
         condition: service_healthy
     environment:
       - APACHE_DOCUMENT_ROOT=/var/www/html/public
+      # Gestionale: valori presi dal file .env accanto a questo (vedi GESTIONALE.md)
+      - ADMIN_EMAILS=${ADMIN_EMAILS:-}
+      - PLAN_PRICE=${PLAN_PRICE:-4.99}
+      - FREE_ITEM_LIMIT=${FREE_ITEM_LIMIT:-200}
+      - TRIAL_DAYS=${TRIAL_DAYS:-14}
+      - APP_URL=${APP_URL:-}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
+      - STRIPE_PRICE_ID=${STRIPE_PRICE_ID:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
     stdin_open: true
     tty: true
     networks:

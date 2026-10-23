@@ -31,6 +31,11 @@ async function api(path, { method = 'GET', body } = {}) {
     renderAuth();
     throw new Error('Sessione scaduta');
   }
+  if (res.status === 402 && state.me) {
+    state.me.billing.premium = false;
+    premiumModal();
+    throw new Error(data.error);
+  }
   if (!res.ok) throw new Error(data.error || 'Errore ' + res.status);
   return data;
 }
@@ -58,13 +63,14 @@ async function guarded(btn, fn) {
 
 // ---------- layout ----------
 function shell(title, content, { back, fab } = {}) {
-  const route = location.hash.split('/')[0] || '#dashboard';
+  const route = location.hash.split(/[/?]/)[0] || '#dashboard';
   const tab = (h, icon, label) => `<a href="${h}" class="${route === h ? 'active' : ''}"><span>${icon}</span>${label}</a>`;
   app.innerHTML = `
     <header class="topbar">
       ${back ? `<a class="back" href="${back}">‹</a>` : '<div class="logo-dot"></div>'}
       <h1>${esc(title)}</h1>
     </header>
+    ${billingBanner()}
     <main>${content}</main>
     ${fab ? `<button class="btn fab" id="fab">${fab}</button>` : ''}
     <nav class="tabbar">
@@ -73,7 +79,132 @@ function shell(title, content, { back, fab } = {}) {
       ${tab('#items', '🃏', 'Carte')}
       ${tab('#sales', '💶', 'Vendite')}
       ${tab('#settings', '⚙️', 'Altro')}
+      ${state.me.user.is_admin ? tab('#admin', '👑', 'Admin') : ''}
     </nav>`;
+}
+
+function billingBanner() {
+  const b = state.me?.billing;
+  if (!b) return '';
+  if (b.state === 'trial') return `<a class="banner" href="#settings">⭐ Premium in prova: ${b.days_left} ${b.days_left === 1 ? 'giorno' : 'giorni'} rimasti</a>`;
+  if (b.state === 'free' && b.items_in_stock >= b.free_item_limit * 0.9) {
+    return `<a class="banner" href="#settings">Piano Free: ${b.items_in_stock}/${b.free_item_limit} carte · Passa a Premium →</a>`;
+  }
+  return '';
+}
+
+const isPremium = () => !!state.me?.billing?.premium;
+const PREMIUM_FEATURES = [
+  ['🃏', 'Carte illimitate', () => `Free: fino a ${state.me.billing.free_item_limit} carte in magazzino`],
+  ['↻', 'Aggiornamento valori in blocco', () => 'Tutto il magazzino aggiornato da CardTrader in un tocco'],
+  ['👥', 'Soci', () => 'Più persone nello stesso negozio'],
+  ['📈', 'Andamento mensile', () => 'Grafico di incassi e spese mese per mese'],
+];
+
+// Finestra che spiega Premium quando si tocca una funzione bloccata.
+function premiumModal(reason) {
+  const b = state.me.billing;
+  openModal('⭐ Premium', `
+    ${reason ? `<p><strong>${esc(reason)}</strong> è incluso in Premium.</p>` : ''}
+    <div class="card">${PREMIUM_FEATURES.map(([i, t, d]) => `<div style="padding:6px 0"><strong>${i} ${t}</strong><div class="small muted">${esc(d())}</div></div>`).join('')}</div>
+    <p class="small muted">Il piano Free resta gratis per sempre: lotti, vendite, riepilogo, prezzi CardTrader ed export.</p>
+    <a class="btn block" href="#settings">Scopri Premium · ${eur(b.price)}/mese</a>`);
+  modalRoot.querySelector('a.btn').addEventListener('click', closeModal);
+}
+
+const MONTHS = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
+const monthLabel = (ym) => MONTHS[+ym.slice(5, 7) - 1];
+
+// Grafico a barre (una serie) con tooltip al passaggio/tocco.
+function barChart(rows, { value, tip, fmt = (v) => v }) {
+  const max = Math.max(...rows.map(value), 0);
+  const bars = rows.map((r, k) => {
+    const v = value(r);
+    const h = max > 0 ? Math.max(v > 0 ? 2 : 0, (v / max) * 100) : 0;
+    return `<div class="bar-col" data-k="${k}" tabindex="0"><div class="bar" style="height:${h}%"></div><div class="bar-x">${monthLabel(r.month)}</div></div>`;
+  }).join('');
+  const id = 'c' + Math.random().toString(36).slice(2, 8);
+  setTimeout(() => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const tt = el.querySelector('.chart-tip');
+    const show = (col) => {
+      const r = rows[+col.dataset.k];
+      el.querySelectorAll('.bar-col').forEach((c) => c.classList.toggle('on', c === col));
+      tt.innerHTML = tip(r);
+      tt.hidden = false;
+      const cr = col.getBoundingClientRect(), er = el.getBoundingClientRect();
+      const x = Math.min(Math.max(cr.left - er.left + cr.width / 2 - tt.offsetWidth / 2, 0), er.width - tt.offsetWidth);
+      tt.style.left = x + 'px';
+    };
+    el.querySelectorAll('.bar-col').forEach((c) => {
+      c.addEventListener('mouseenter', () => show(c));
+      c.addEventListener('click', () => show(c));
+      c.addEventListener('focus', () => show(c));
+    });
+    el.addEventListener('mouseleave', () => { tt.hidden = true; el.querySelectorAll('.bar-col').forEach((c) => c.classList.remove('on')); });
+  });
+  return `<div class="chart card" id="${id}"><div class="chart-max small muted">${fmt(max)}</div><div class="bars">${bars}</div><div class="chart-tip" hidden></div></div>`;
+}
+
+// Aggiorna il valore stimato di più carte da CardTrader, con avanzamento.
+function bulkRefresh(items, reload) {
+  if (!isPremium()) return premiumModal("L'aggiornamento valori in blocco");
+  const todo = items.filter((i) => i.status !== 'sold');
+  const withCatalog = todo.filter((i) => i.blueprint_id);
+  openModal('Aggiorna valori da CardTrader', `
+    <p>${withCatalog.length} carte collegate al catalogo su ${todo.length} non vendute.
+    ${todo.length - withCatalog.length ? `<br><span class="small muted">Le altre ${todo.length - withCatalog.length} non hanno un collegamento CardTrader: aprile e selezionale dal catalogo.</span>` : ''}</p>
+    <div class="field"><label>Valore da usare</label>
+      <select id="strategy"><option value="min">Prezzo minimo (più prudente)</option><option value="median">Prezzo mediano (più realistico)</option></select></div>
+    <p class="small muted">Usa lingua e condizione di ogni carta. Se non ci sono offerte, il valore resta invariato.</p>
+    <button class="btn block" id="go" ${withCatalog.length ? '' : 'disabled'}>Aggiorna ${withCatalog.length} carte</button>
+    <div id="progress" hidden>
+      <div class="progress"><div></div></div>
+      <p class="small muted" id="prog-text"></p>
+    </div>
+    <div id="result"></div>`, (m) => {
+    m.querySelector('#go').addEventListener('click', async (e) => {
+      e.target.disabled = true;
+      m.querySelector('#strategy').disabled = true;
+      m.querySelector('#progress').hidden = false;
+      const strategy = m.querySelector('#strategy').value;
+      const results = [];
+      let done = 0, stop = false;
+      const queue = [...withCatalog];
+      const bar = m.querySelector('.progress div'), txt = m.querySelector('#prog-text');
+      const worker = async () => {
+        while (queue.length && !stop) {
+          const it = queue.shift();
+          try { results.push({ item: it, ...(await api(`items/${it.id}/refresh-price`, { method: 'POST', body: { strategy } })) }); }
+          catch (err) {
+            results.push({ item: it, error: err.message });
+            if (/token|premium|raggiungibile/i.test(err.message)) stop = true; // inutile continuare
+          }
+          done++;
+          bar.style.width = (done / withCatalog.length) * 100 + '%';
+          txt.textContent = `${done} / ${withCatalog.length}`;
+        }
+      };
+      await Promise.all([worker(), worker()]);
+      const upd = results.filter((r) => r.new != null && !r.skipped && !r.error);
+      const before = upd.reduce((s, r) => s + (r.old || 0) * r.item.quantity, 0);
+      const after = upd.reduce((s, r) => s + r.new * r.item.quantity, 0);
+      const noOffers = results.filter((r) => r.skipped === 'no_offers').length;
+      const errors = results.filter((r) => r.error);
+      const moves = upd.map((r) => ({ ...r, diff: (r.new - (r.old || 0)) * r.item.quantity })).filter((r) => Math.abs(r.diff) >= 0.01)
+        .sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff)).slice(0, 8);
+      m.querySelector('#result').innerHTML = `
+        <div class="kpis" style="margin-top:12px">
+          <div class="kpi"><div class="label">Aggiornate</div><div class="value">${upd.length}</div><div class="small muted">${noOffers} senza offerte${errors.length ? ` · ${errors.length} errori` : ''}</div></div>
+          <div class="kpi"><div class="label">Variazione valore</div><div class="value">${signed(after - before)}</div><div class="small muted">${eur(before)} → ${eur(after)}</div></div>
+        </div>
+        ${errors.length ? `<p class="small neg">${esc(errors[0].error)}</p>` : ''}
+        ${moves.length ? `<h2>Variazioni maggiori</h2><div class="card">${moves.map((r) => `<div class="grid2" style="padding:4px 0"><span>${esc(r.item.name)}</span><span>${eur(r.old)} → ${eur(r.new)} ${signed(r.diff)}</span></div>`).join('')}</div>` : ''}
+        <button class="btn block secondary" data-close style="margin-top:12px">Chiudi</button>`;
+      reload();
+    });
+  });
 }
 
 function openModal(title, html, onMount) {
@@ -123,7 +254,8 @@ function renderAuth(mode = 'login') {
   app.innerHTML = `
     <div class="auth">
       <div class="brand"><div class="logo-dot"></div><h1>CardLedger</h1>
-        <p class="muted">Lotti, carte, vendite e profitti in un posto solo.</p></div>
+        <p class="muted">Lotti, carte, vendite e profitti in un posto solo.</p>
+        <p class="small muted">Gratis per sempre · Premium facoltativo, 14 giorni di prova inclusi.</p></div>
       <div class="tabs">
         <button data-mode="login" class="${mode === 'login' ? 'active' : ''}">Accedi</button>
         <button data-mode="register" class="${mode === 'register' ? 'active' : ''}">Registrati</button>
@@ -150,6 +282,7 @@ function renderAuth(mode = 'login') {
 
 // ---------- dashboard ----------
 async function viewDashboard() {
+  state.me = await api('me').catch(() => state.me);
   shell(state.me.workspace.name, '<div class="empty">Caricamento…</div>', { fab: '+ Lotto' });
   document.getElementById('fab').onclick = () => lotForm();
   const d = await api('dashboard');
@@ -162,12 +295,16 @@ async function viewDashboard() {
       <div class="kpi"><div class="label">Valore magazzino</div><div class="value">${eur(d.stock_value)}</div><div class="small muted">${d.cards_in_stock} carte · ${d.cards_listed} in vendita</div></div>
       <div class="kpi"><div class="label">Saldo cassa</div><div class="value">${signed(d.balance)}</div><div class="small muted">${d.cards_sold} vendute</div></div>
     </div>
+    <h2>Incassi netti per mese</h2>
+    ${!d.months ? '<div class="card locked" id="lock-chart">📈 Andamento mensile di incassi e spese<br><span class="small muted">Funzione Premium · tocca per scoprire</span></div>' : barChart(d.months, { value: (r) => r.revenue, fmt: eur,
+      tip: (r) => `<strong>${monthLabel(r.month)} ${r.month.slice(0, 4)}</strong><br>Incassato ${eur(r.revenue)}<br>Speso ${eur(r.spent)}<br>Saldo ${signed(r.profit)}` })}
     <h2>Lotti migliori</h2>
     <div class="list">${d.best_lots.length ? d.best_lots.map(lotRow).join('') : '<div class="empty">Nessun lotto. Crea il primo con “+ Lotto”.</div>'}</div>
     <h2>Carte più preziose in magazzino</h2>
     <div class="list" id="top">${d.top_items.length ? d.top_items.map((i) => itemRow(i)).join('') : '<div class="empty">Ancora nessuna carta.</div>'}</div>
     <h2>Ultime vendite</h2>
     <div class="list" id="recent">${d.recent_sales.length ? d.recent_sales.map((i) => itemRow(i)).join('') : '<div class="empty">Ancora nessuna vendita.</div>'}</div>`;
+  main.querySelector('#lock-chart')?.addEventListener('click', () => premiumModal("L'andamento mensile"));
   bindItemRows(main.querySelector('#top'), d.top_items, viewDashboard);
   bindItemRows(main.querySelector('#recent'), d.recent_sales, viewDashboard);
 }
@@ -242,10 +379,11 @@ async function viewLot(id) {
       <div class="kpi"><div class="label">Profitto realizzato</div><div class="value">${signed(l.profit)}</div></div>
     </div>
     <p class="muted small">${[fmtDate(l.purchase_date), l.source].filter(Boolean).map(esc).join(' · ')}${l.notes ? '<br>' + esc(l.notes) : ''}</p>
-    <div class="actions"><button class="btn secondary sm" id="edit-lot">Modifica lotto</button></div>
+    <div class="actions"><button class="btn secondary sm" id="edit-lot">Modifica lotto</button><button class="btn secondary sm" id="bulk-lot">↻ Aggiorna valori</button></div>
     <h2>Carte (${l.cards})</h2>
     <div class="list" id="items">${l.items.length ? l.items.map((i) => itemRow(i)).join('') : '<div class="empty">Aggiungi le carte trovate nel lotto con “+ Carta”.<br>Basta segnare quelle che valgono qualcosa.</div>'}</div>`;
   main.querySelector('#edit-lot').onclick = () => lotForm(l);
+  main.querySelector('#bulk-lot').onclick = () => bulkRefresh(l.items, reload);
   bindItemRows(main.querySelector('#items'), l.items, reload);
 }
 
@@ -259,7 +397,9 @@ async function viewItems() {
       ${[['unsold', 'Disponibili'], ['in_stock', 'In magazzino'], ['listed', 'In vendita'], ['sold', 'Vendute'], ['', 'Tutte']]
         .map(([v, t]) => `<button class="chip ${itemsFilter.status === v ? 'active' : ''}" data-status="${v}">${t}</button>`).join('')}
     </div>
+    <div class="actions" style="margin:0 0 10px"><button class="btn secondary sm" id="bulk">↻ Aggiorna valori da CardTrader</button></div>
     <div id="items-list" class="list"><div class="empty">Caricamento…</div></div>`, { fab: '+ Carta' });
+  document.getElementById('bulk').onclick = async () => isPremium() ? bulkRefresh(await api('items?status=unsold'), loadItems) : premiumModal("L'aggiornamento valori in blocco");
   document.getElementById('fab').onclick = () => itemForm(null, {}, loadItems);
   app.querySelectorAll('[data-status]').forEach((b) => b.addEventListener('click', () => { itemsFilter.status = b.dataset.status; viewItems(); }));
   let t;
@@ -286,7 +426,7 @@ async function loadItems() {
 function itemDetail(i, reload) {
   const rows = [
     ['Set', i.set_name], ['Numero', i.card_number], ['Lingua', i.language?.toUpperCase()], ['Condizione', i.card_condition],
-    ['Quantità', i.quantity], ['Valore stimato', i.est_value != null ? eur(i.est_value) + (i.quantity > 1 ? ' cad.' : '') : null],
+    ['Quantità', i.quantity], ['Valore stimato', i.est_value != null ? eur(i.est_value) + (i.quantity > 1 ? ' cad.' : '') + (i.est_value_updated_at ? ` <span class="small muted">(CardTrader ${esc(fmtDate(i.est_value_updated_at.slice(0, 10)))})</span>` : '') : null],
     ['Costo acquisto', i.purchase_cost != null ? eur(i.purchase_cost) : null], ['Stato', STATUS_LABEL[i.status]],
     ['Venduta a', i.sale_price != null ? eur(i.sale_price) : null], ['Commissioni/spedizione', i.sale_fees != null ? eur(i.sale_fees) : null],
     ['Data vendita', fmtDate(i.sale_date)], ['Canale', i.sale_channel], ['Note', i.notes],
@@ -492,9 +632,41 @@ async function viewSales() {
 }
 
 // ---------- impostazioni ----------
-function viewSettings() {
-  const { user, workspace, members } = state.me;
+async function viewSettings() {
+  if (location.hash.includes('pagamento=ok')) {
+    toast('Pagamento ricevuto, grazie! 🎉');
+    history.replaceState(null, '', '#settings');
+  }
+  state.me = await api('me').catch(() => state.me);
+  const { user, workspace, members, billing: b } = state.me;
+  const planText = {
+    comp: '⭐ Premium incluso (account proprietario).',
+    pro: `⭐ Premium attivo fino al <strong>${fmtDate(b.until?.slice(0, 10))}</strong>${b.canceled ? ' (disdetto: poi torni su Free)' : ', rinnovo automatico'}.`,
+    trial: `⭐ Premium in prova: <strong>${b.days_left} giorni</strong> rimasti. Poi passi a Free senza perdere nulla.`,
+    free: `Piano <strong>Free</strong> · ${b.items_in_stock}/${b.free_item_limit} carte in magazzino.`,
+  }[b.state];
   shell('Altro', `
+    <h2>Piano</h2>
+    <div class="card">
+      <p style="margin-top:0">${planText}</p>
+      ${b.state !== 'comp' ? `
+        <table class="plans">
+          <tr><th></th><th>Free</th><th>⭐ Premium</th></tr>
+          <tr><td>Lotti, vendite, riepilogo</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Prezzo CardTrader per carta</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Export Excel</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Carte in magazzino</td><td>${b.free_item_limit}</td><td>Illimitate</td></tr>
+          <tr><td>Aggiornamento valori in blocco</td><td>—</td><td>✓</td></tr>
+          <tr><td>Soci nello stesso negozio</td><td>—</td><td>✓</td></tr>
+          <tr><td>Andamento mensile</td><td>—</td><td>✓</td></tr>
+          <tr><td>Prezzo</td><td>Gratis</td><td>${eur(b.price)}/mese</td></tr>
+        </table>
+        <div class="actions">
+          ${b.stripe_enabled && (b.state !== 'pro' || b.canceled) ? `<button class="btn" id="checkout">Passa a Premium · ${eur(b.price)}/mese</button>` : ''}
+          ${b.stripe_enabled && b.has_stripe_customer ? '<button class="btn secondary" id="portal">Gestisci pagamento</button>' : ''}
+          ${!b.stripe_enabled && b.state !== 'pro' ? '<p class="small muted">Per attivare Premium contatta il gestore del servizio.</p>' : ''}
+        </div>` : ''}
+    </div>
     <h2>Il tuo negozio</h2>
     <form id="ws" class="card">
       <div class="field"><label>Nome</label><input name="name" value="${esc(workspace.name)}"></div>
@@ -503,7 +675,7 @@ function viewSettings() {
     <h2>Soci</h2>
     <div class="card">
       ${members.map((m) => `<div style="padding:4px 0">👤 ${esc(m.name)} <span class="muted small">${esc(m.email)}</span></div>`).join('')}
-      <p class="small muted">Fai registrare il tuo socio con questo codice invito: vedrete gli stessi lotti e le stesse carte.</p>
+      <p class="small muted">Fai registrare il tuo socio con questo codice invito: vedrete gli stessi lotti e le stesse carte.${b.premium ? '' : ' <strong>Funzione Premium.</strong>'}</p>
       <div class="code">${esc(workspace.invite_code)}</div>
     </div>
     <h2>Unisciti a un altro negozio</h2>
@@ -516,6 +688,9 @@ function viewSettings() {
     <h2>Account</h2>
     <p class="muted">${esc(user.name)} · ${esc(user.email)}</p>
     <button class="btn danger" id="logout">Esci</button>`);
+  const goTo = (path) => async (e) => guarded(e.target, async () => { location.href = (await api(path, { method: 'POST', body: {} })).url; });
+  document.getElementById('checkout')?.addEventListener('click', goTo('billing/checkout'));
+  document.getElementById('portal')?.addEventListener('click', goTo('billing/portal'));
   const ws = document.getElementById('ws');
   ws.addEventListener('submit', (e) => { e.preventDefault(); guarded(ws.querySelector('button'), async () => { state.me = await api('workspace', { method: 'PUT', body: formData(ws) }); toast('Salvato'); viewSettings(); }); });
   const join = document.getElementById('join');
@@ -527,18 +702,90 @@ function viewSettings() {
   document.getElementById('logout').onclick = (e) => guarded(e.target, async () => { await api('auth/logout', { method: 'POST', body: {} }); state.me = null; state.lots = []; renderAuth(); });
 }
 
+// ---------- pannello proprietario ----------
+const STATE_LABEL = { comp: 'Premium gratis', pro: 'Premium', trial: 'Prova Premium', free: 'Free' };
+let adminFilter = '';
+
+async function viewAdmin() {
+  if (!state.me.user.is_admin) { location.hash = '#dashboard'; return; }
+  shell('Pannello proprietario', '<div class="empty">Caricamento…</div>');
+  renderAdmin(await api('admin/overview'));
+}
+
+function renderAdmin(d) {
+  const c = d.counts;
+  const rows = d.rows.filter((r) => !adminFilter || r.state === adminFilter);
+  const main = app.querySelector('main');
+  main.innerHTML = `
+    <div class="kpis">
+      <div class="kpi wide"><div class="label">Entrate mensili ricorrenti (MRR)</div><div class="value">${eur(d.mrr)}</div>
+        <div class="small muted">${c.pro} paganti × ${eur(d.price)} · ${eur(d.mrr * 12)}/anno</div></div>
+      <div class="kpi"><div class="label">Negozi</div><div class="value">${d.workspaces}</div><div class="small muted">${d.users} utenti</div></div>
+      <div class="kpi"><div class="label">Attivi ultimi 7 giorni</div><div class="value">${d.active_7d}</div></div>
+      <div class="kpi"><div class="label">Prova Premium</div><div class="value">${c.trial}</div><div class="small muted">${d.trials_expiring} finiscono entro 3 giorni</div></div>
+      <div class="kpi"><div class="label">Free</div><div class="value">${c.free}</div><div class="small muted">conversione a Premium ${c.pro + c.free ? Math.round((c.pro / (c.pro + c.free)) * 100) : 0}%</div></div>
+    </div>
+    ${d.stripe_enabled ? '' : '<p class="small muted">Stripe non configurato: attiva Premium a mano da qui, oppure imposta le chiavi (vedi GESTIONALE.md).</p>'}
+    <h2>Nuovi utenti per mese</h2>
+    ${barChart(d.signups, { value: (r) => r.value, tip: (r) => `<strong>${monthLabel(r.month)} ${r.month.slice(0, 4)}</strong><br>${r.value} nuovi utenti` })}
+    <h2>Negozi</h2>
+    <div class="chips">${[['', 'Tutti'], ['pro', 'Premium'], ['trial', 'In prova'], ['free', 'Free'], ['comp', 'Premium gratis']]
+      .map(([v, t]) => `<button class="chip ${adminFilter === v ? 'active' : ''}" data-f="${v}">${t}</button>`).join('')}</div>
+    <div class="list">${rows.length ? rows.map((r) => `
+      <div class="row" data-ws="${r.id}">
+        <div class="body">
+          <div class="title">${esc(r.name)}</div>
+          <div class="sub">${esc(r.members.map((m) => m.email).join(', '))}</div>
+          <div class="sub">${r.lots} lotti · ${r.cards} carte · ultima attività ${fmtDate(r.last_activity.slice(0, 10))}</div>
+        </div>
+        <div class="right"><span class="badge st-${r.state}">${STATE_LABEL[r.state]}</span>
+          <div class="small muted" style="margin-top:4px">${r.state === 'pro' || r.state === 'trial' ? `${r.days_left} gg` : ''}</div></div>
+      </div>`).join('') : '<div class="empty">Nessun negozio.</div>'}</div>`;
+  main.querySelectorAll('[data-f]').forEach((b) => b.addEventListener('click', () => { adminFilter = b.dataset.f; renderAdmin(d); }));
+  main.querySelectorAll('[data-ws]').forEach((el) => el.addEventListener('click', () => adminWorkspace(d.rows.find((r) => r.id === +el.dataset.ws))));
+}
+
+function adminWorkspace(r) {
+  openModal(r.name, `
+    <div class="card">
+      <div class="grid2" style="padding:4px 0"><span class="muted">Stato</span><span><span class="badge st-${r.state}">${STATE_LABEL[r.state]}</span>${r.canceled ? ' <span class="small muted">disdetto</span>' : ''}</span></div>
+      ${r.until ? `<div class="grid2" style="padding:4px 0"><span class="muted">Scadenza</span><span>${fmtDate(r.until.slice(0, 10))}</span></div>` : ''}
+      <div class="grid2" style="padding:4px 0"><span class="muted">Iscritto il</span><span>${fmtDate(r.created_at.slice(0, 10))}</span></div>
+      <div class="grid2" style="padding:4px 0"><span class="muted">Pagamento</span><span>${r.stripe ? 'Stripe' : 'Manuale'}</span></div>
+      <div class="grid2" style="padding:4px 0"><span class="muted">Utilizzo</span><span>${r.lots} lotti · ${r.cards} carte</span></div>
+      <div class="grid2" style="padding:4px 0"><span class="muted">Magazzino / incassato</span><span>${eur(r.stock_value)} / ${eur(r.revenue)}</span></div>
+      <div style="padding:4px 0"><span class="muted">Membri</span>${r.members.map((m) => `<div>👤 ${esc(m.name)} <span class="small muted">${esc(m.email)}</span></div>`).join('')}</div>
+    </div>
+    <h2>Azioni</h2>
+    <p class="small muted">Per Premium pagato a mano (bonifico, PayPal, contanti).</p>
+    <div class="actions">
+      <button class="btn" data-a="extend" data-d="30">Premium +1 mese</button>
+      <button class="btn" data-a="extend" data-d="365">Premium +1 anno</button>
+      <button class="btn secondary" data-a="trial" data-d="14">Prova Premium 14 gg</button>
+      <button class="btn secondary" data-a="comp">Premium gratis per sempre</button>
+      <button class="btn danger" data-a="free">Riporta a Free</button>
+    </div>`, (m) => {
+    m.querySelectorAll('[data-a]').forEach((b) => b.addEventListener('click', () => guarded(b, async () => {
+      if (b.dataset.a === 'free' && !confirm('Riportare questo negozio al piano Free?')) return;
+      const d = await api(`admin/workspaces/${r.id}`, { method: 'PUT', body: { action: b.dataset.a, days: +b.dataset.d || 30 } });
+      closeModal(); toast('Aggiornato'); renderAdmin(d);
+    })));
+  });
+}
+
 // ---------- router ----------
 async function router() {
   if (!state.me) return renderAuth();
   closeModal();
-  const [route, id] = (location.hash || '#dashboard').split('/');
+  const [route, id] = (location.hash || '#dashboard').split('?')[0].split('/');
   try {
     switch (route) {
       case '#lots': return await viewLots();
       case '#lot': return await viewLot(+id);
       case '#items': return await viewItems();
       case '#sales': return await viewSales();
-      case '#settings': return viewSettings();
+      case '#settings': return await viewSettings();
+      case '#admin': return await viewAdmin();
       default: return await viewDashboard();
     }
   } catch (e) {

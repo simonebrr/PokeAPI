@@ -81,4 +81,42 @@ function g_migrate(PDO $pdo): void
         created_by INT NULL,
         created_at DATETIME NOT NULL
     )");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS g_meta (
+        k VARCHAR(50) PRIMARY KEY,
+        v VARCHAR(255) NOT NULL
+    )");
+    $version = (int)($pdo->query("SELECT v FROM g_meta WHERE k = 'schema'")->fetchColumn() ?: 1);
+
+    if ($version < 2) {
+        // Abbonamenti (vendita del gestionale) e data aggiornamento prezzi.
+        $cols = [
+            ['g_workspaces', 'plan', "VARCHAR(20) NOT NULL DEFAULT 'trial'"],
+            ['g_workspaces', 'trial_ends_at', 'DATETIME NULL'],
+            ['g_workspaces', 'paid_until', 'DATETIME NULL'],
+            ['g_workspaces', 'stripe_customer_id', 'VARCHAR(80) NULL'],
+            ['g_workspaces', 'stripe_subscription_id', 'VARCHAR(80) NULL'],
+            ['g_items', 'est_value_updated_at', 'DATETIME NULL'],
+        ];
+        foreach ($cols as [$table, $col, $def]) {
+            try {
+                $pdo->query("SELECT $col FROM $table LIMIT 1");
+            } catch (PDOException $e) {
+                $pdo->exec("ALTER TABLE $table ADD COLUMN $col $def");
+            }
+        }
+        // I negozi già esistenti partono con una prova piena.
+        $pdo->prepare('UPDATE g_workspaces SET trial_ends_at = ? WHERE trial_ends_at IS NULL')
+            ->execute([date('Y-m-d H:i:s', time() + g_trial_days() * 86400)]);
+        try {
+            $pdo->exec("INSERT INTO g_meta (k, v) VALUES ('schema', '2')");
+        } catch (PDOException $e) {
+            // Un'altra richiesta concorrente ha già completato la migrazione.
+        }
+    }
+}
+
+function g_trial_days(): int
+{
+    return (int)(getenv('TRIAL_DAYS') ?: 14);
 }
