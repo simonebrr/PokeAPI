@@ -9,6 +9,7 @@ require_once __DIR__ . '/premium.php';
 require_once __DIR__ . '/growth.php';
 require_once __DIR__ . '/paypal.php';
 require_once __DIR__ . '/sealed.php';
+require_once __DIR__ . '/openings.php';
 
 const G_STATUSES = ['in_stock', 'listed', 'sold'];
 
@@ -927,6 +928,12 @@ function g_route(string $method, array $seg): void
             case 'GET sealed/sets': g_sealed_sets();
             case 'GET sealed/analyze': g_sealed_analyze();
             case 'PUT sealed/rates/:id': g_sealed_rates_save($id);
+            case 'GET openings/set': g_opening_set();
+            case 'GET openings': g_openings_list();
+            case 'POST openings': g_opening_create();
+            case 'DELETE openings/:id': g_opening_delete($id);
+            case 'GET admin/openings': g_admin_openings();
+            case 'PUT admin/openings/:id': g_admin_opening_update($id);
             case 'GET admin/usage': g_admin_usage();
             case 'POST billing/checkout': g_billing_checkout();
             case 'POST billing/portal': g_billing_portal();

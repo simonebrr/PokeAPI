@@ -291,7 +291,7 @@ function g_delete_account(): void
 // Tabelle con dati del negozio: estesa dalle funzioni successive (storico, avvisi…).
 function g_workspace_tables(): array
 {
-    return ['g_price_history', 'g_stock_snapshots', 'g_notifications', 'g_lot_shares', 'g_events', 'g_items', 'g_lots'];
+    return ['g_opening_hits', 'g_openings', 'g_price_history', 'g_stock_snapshots', 'g_notifications', 'g_lot_shares', 'g_events', 'g_items', 'g_lots'];
 }
 
 function g_delete_workspace_data(PDO $pdo, int $wsId): void

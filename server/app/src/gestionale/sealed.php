@@ -202,8 +202,9 @@ function g_sealed_analyze(): void
     $lang = g_str($_GET['language'] ?? null, 5);
     $data = g_sealed_data($exp, $lang ? strtolower($lang) : null);
     $custom = g_sealed_rates($exp);
+    $community = g_community_stats($exp);
 
-    // Raggruppa le carte per rarità con il pull rate (personalizzato > default > sconosciuto).
+    // Raggruppa le carte per rarità; pull rate = stima (proprietario o default) corretta con i dati community.
     $groups = [];
     foreach ($data['cards'] as $c) {
         $key = strtolower(trim($c['rarity']));
@@ -217,13 +218,18 @@ function g_sealed_analyze(): void
     }
     $rarities = [];
     foreach ($groups as $key => $g) {
-        $rate = $custom[$key] ?? G_DEFAULT_PULL_RATES[$key] ?? null;
+        $br = g_blended_rate($key, $custom[$key] ?? null, G_DEFAULT_PULL_RATES[$key] ?? null, $community);
+        $rate = $br['rate'];
         $prices = array_column($g['cards'], 'price');
         usort($g['cards'], fn($a, $b) => $b['price'] <=> $a['price']);
         $rarities[] = [
             'rarity' => $g['rarity'],
             'per_pack' => $rate,
             'custom' => isset($custom[$key]),
+            'source' => $br['source'],
+            'community_rate' => $br['community_rate'],
+            'community_hits' => $community['hits'][$key] ?? 0,
+            'prior' => $custom[$key] ?? G_DEFAULT_PULL_RATES[$key] ?? null,
             'avg' => $prices ? round(array_sum($prices) / count($prices), 2) : 0,
             'cards' => array_map(fn($c) => ['name' => $c['name'], 'number' => $c['number'], 'price' => $c['price'], 'image_url' => $c['image_url']], $g['cards']),
         ];
@@ -239,6 +245,7 @@ function g_sealed_analyze(): void
         'rarities' => $rarities,
         'sealed' => $data['sealed'],
         'can_edit_rates' => g_is_admin($u),
+        'community' => ['packs' => $community['packs'], 'openings' => $community['openings'], 'users' => $community['users']],
     ]);
 }
 

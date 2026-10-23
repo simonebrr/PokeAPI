@@ -240,6 +240,43 @@ function g_migrate(PDO $pdo): void
         )");
         g_set_schema($pdo, 7);
     }
+
+    if ($version < 8) {
+        // Sbustamenti registrati dagli utenti: pull rate reali dalla community.
+        $pdo->exec("CREATE TABLE IF NOT EXISTS g_openings (
+            id $id,
+            workspace_id INT NOT NULL,
+            user_id INT NOT NULL,
+            expansion_id INT NOT NULL,
+            set_name VARCHAR(190) NULL,
+            product VARCHAR(80) NOT NULL,
+            packs INT NOT NULL,
+            language VARCHAR(5) NULL,
+            paid DECIMAL(10,2) NULL,
+            value DECIMAL(10,2) NOT NULL DEFAULT 0,
+            lot_id INT NULL,
+            excluded INT NOT NULL DEFAULT 0,
+            complete INT NOT NULL DEFAULT 0,
+            created_at DATETIME NOT NULL
+        )");
+        $pdo->exec("CREATE TABLE IF NOT EXISTS g_opening_hits (
+            id $id,
+            workspace_id INT NOT NULL,
+            opening_id INT NOT NULL,
+            expansion_id INT NOT NULL,
+            blueprint_id INT NOT NULL,
+            rarity VARCHAR(80) NOT NULL,
+            card_name VARCHAR(190) NOT NULL,
+            qty INT NOT NULL
+        )");
+        try {
+            $pdo->exec('CREATE INDEX idx_open_exp ON g_openings (expansion_id, excluded)');
+            $pdo->exec('CREATE INDEX idx_hits_exp ON g_opening_hits (expansion_id, opening_id)');
+        } catch (PDOException $e) {
+            // indici già presenti
+        }
+        g_set_schema($pdo, 8);
+    }
 }
 
 function g_add_columns(PDO $pdo, array $cols): void

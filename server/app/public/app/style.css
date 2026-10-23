@@ -221,3 +221,7 @@ a.chip { text-decoration: none; }
 .badge.verdict.even { background: #fef3c7; color: #92400e; }
 input.mini { width: 64px; padding: 4px 6px; font-size: 14px; display: inline-block; }
 table.rates td, table.rates th { font-size: 13px; padding: 6px 4px; }
+.pick { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.pick:last-child { border-bottom: 0; }
+.qty { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+.qty button { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 16px; cursor: pointer; }

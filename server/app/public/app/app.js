@@ -468,8 +468,8 @@ async function viewLots() {
   document.getElementById('fab').onclick = () => lotForm();
   state.lots = await api('lots');
   app.querySelector('main').innerHTML = state.lots.length
-    ? `<div class="actions" style="margin:0 0 10px"><a class="btn secondary sm" href="#sealed">🎁 Bustine/ETB: sbusto o rivendo?</a></div><div class="list">${state.lots.map(lotRow).join('')}</div>`
-    : '<div class="empty">Nessun lotto ancora.<br>Un lotto è un acquisto in blocco (es. 100 carte a 10 €).</div>';
+    ? `<div class="actions" style="margin:0 0 10px"><a class="btn secondary sm" href="#sealed">🎁 Bustine/ETB: sbusto o rivendo?</a><a class="btn secondary sm" href="#openings">📦 I miei sbustamenti</a></div><div class="list">${state.lots.map(lotRow).join('')}</div>`
+    : '<div class="actions" style="margin:0 0 10px"><a class="btn secondary sm" href="#openings">📦 I miei sbustamenti</a></div><div class="empty">Nessun lotto ancora.<br>Un lotto è un acquisto in blocco (es. 100 carte a 10 €).</div>';
 }
 
 function lotForm(lot = null) {
@@ -1143,14 +1143,17 @@ function renderSealed(out) {
     <div class="card">${hits.map((c) => `<div class="grid2" style="padding:4px 0"><span>${esc(c.name)} <span class="small muted">${esc(c.number || '')} · ${esc(c.rarity)}</span></span><span>${eur(c.price)} <span class="small muted">${oneIn(c.p)} bust.</span></span></div>`).join('') || '<span class="muted">Nessun prezzo disponibile.</span>'}</div>
     <h2>Pull rate per rarità</h2>
     <div class="card">
-      <table class="plans rates"><tr><th>Rarità</th><th>Probabilità</th><th>Carte</th><th>Valore medio</th></tr>
-      ${d.rarities.map((r) => `<tr><td>${esc(r.rarity)}${r.custom ? ' ✎' : ''}</td>
-        <td>${d.can_edit_rates ? `<input class="mini" data-rate="${esc(r.rarity)}" value="${r.per_pack ? Math.round(1 / r.per_pack * 10) / 10 : ''}" placeholder="—" title="1 su N bustine">` : oneIn(r.per_pack)}</td>
+      <p class="small" style="margin-top:0">${d.community.packs ? `📊 Dati community: <strong>${d.community.packs} bustine</strong> registrate da ${d.community.users} utenti. ` : '📊 Nessuno sbustamento registrato ancora per questo set: valori stimati. '}
+        <a href="#opening/${d.expansion_id}">Registra il tuo</a></p>
+      <table class="plans rates"><tr><th>Rarità</th><th>Probabilità</th><th>Fonte</th><th>Carte</th><th>Valore medio</th></tr>
+      ${d.rarities.map((r) => `<tr><td>${esc(r.rarity)}</td>
+        <td>${d.can_edit_rates ? `<input class="mini" data-rate="${esc(r.rarity)}" value="${r.prior ? Math.round(1 / r.prior * 10) / 10 : ''}" placeholder="—" title="Tua stima: 1 su N bustine"><div class="small muted">usato ${oneIn(r.per_pack)}</div>` : oneIn(r.per_pack)}</td>
+        <td class="small">${{ community: '👥 community', owner: '✎ proprietario', default: 'stima' }[r.source] || '—'}${r.community_rate != null && r.source !== 'community' && d.community.packs ? `<br><span class="muted">community ${oneIn(r.community_rate)}</span>` : ''}</td>
         <td>${r.cards.length}</td><td>${eur(r.avg)}</td></tr>`).join('')}</table>
-      ${d.can_edit_rates ? '<p class="small muted">Proprietario: scrivi N per “1 su N bustine” (vuoto = non conteggiata).</p><button class="btn sm" id="save-rates">Salva pull rate del set</button>' : ''}
+      ${d.can_edit_rates ? '<p class="small muted">Proprietario: nei campi c'è la stima di partenza, scrivi N per “1 su N bustine” (vuoto = default). Le stime restano la base e vengono corretti dai dati community quando le bustine registrate diventano tante.</p><button class="btn sm" id="save-rates">Salva pull rate del set</button>' : ''}
       ${unknown.length ? `<p class="small muted">Senza pull rate (non conteggiate): ${unknown.map((r) => esc(r.rarity)).join(', ')}.</p>` : ''}
     </div>
-    <p class="small muted">Stime indicative: pull rate medi della community e prezzi delle offerte più basse. Le comuni/non comuni valgono ${eur(d.bulk_per_pack)} a bustina (bulk). Il risultato reale di uno sbustamento può variare molto.</p>`;
+    <p class="small muted">Stime indicative: pull rate stimati e corretti con gli sbustamenti registrati dagli utenti, prezzi delle offerte più basse. Le comuni/non comuni valgono ${eur(d.bulk_per_pack)} a bustina (bulk). Il risultato reale di uno sbustamento può variare molto.</p>`;
 
   out.querySelectorAll('[data-packs]').forEach((inp) => inp.addEventListener('change', () => { sealedState.packs[+inp.dataset.packs] = Math.max(1, +inp.value || 1); renderSealed(out); }));
   const manual = () => {
@@ -1169,6 +1172,121 @@ function renderSealed(out) {
     sealedState.data = await api(`sealed/analyze?expansion_id=${d.expansion_id}&language=${sealedState.lang}`);
     renderSealed(out);
   }));
+}
+
+// ---------- sbustamenti registrati (dati community sui pull rate) ----------
+const openingState = { data: null, product: 'Elite Trainer Box', packs: 9, lang: 'it', paid: '', hits: {}, filter: '', rarity: '', complete: false, inventory: true };
+
+async function viewOpenings() {
+  shell('I miei sbustamenti', '<div class="empty">Caricamento…</div>', { back: '#lots', fab: '+ Registra' });
+  document.getElementById('fab').onclick = () => { location.hash = '#opening'; };
+  const rows = await api('openings');
+  const tot = rows.reduce((a, o) => ({ packs: a.packs + o.packs, value: a.value + o.value, paid: a.paid + (o.paid || 0) }), { packs: 0, value: 0, paid: 0 });
+  app.querySelector('main').innerHTML = `
+    <p class="small muted" style="margin-top:0">Registrando cosa trovi nelle bustine aiuti a calcolare i pull rate reali di ogni set per tutti gli utenti.</p>
+    ${rows.length ? `<div class="kpis"><div class="kpi"><div class="label">Bustine aperte</div><div class="value">${tot.packs}</div></div>
+      <div class="kpi"><div class="label">Valore trovato</div><div class="value">${eur(tot.value)}</div>${tot.paid ? `<div class="small muted">pagato ${eur(tot.paid)} · ${signed(tot.value - tot.paid)}</div>` : ''}</div></div>` : ''}
+    <div class="list" style="margin-top:12px">${rows.length ? rows.map((o) => `
+      <div class="card">
+        <div class="grid2"><strong>${esc(o.product)} · ${esc(o.set_name || '')}</strong><span style="text-align:right">${eur(o.value)}${o.paid != null ? `<br><span class="small">${signed(o.value - o.paid)}</span>` : ''}</span></div>
+        <div class="small muted">${fmtDate(o.created_at.slice(0, 10))} · ${o.packs} bustine${o.language ? ' · ' + o.language.toUpperCase() : ''}</div>
+        <div class="small" style="margin-top:6px">${o.hits.length ? o.hits.map((h) => `${h.qty > 1 ? h.qty + '× ' : ''}${esc(h.name)} <span class="muted">(${esc(h.rarity)})</span>`).join(' · ') : '<span class="muted">Nessuna carta speciale</span>'}</div>
+        <div class="actions" style="margin-top:6px">${o.lot_id ? `<a class="btn secondary sm" href="#lot/${o.lot_id}">Vedi lotto</a>` : ''}<button class="btn danger sm" data-del="${o.id}">Elimina</button></div>
+      </div>`).join('') : '<div class="empty">Nessuno sbustamento registrato.<br>Tocca “+ Registra” dopo aver aperto bustine, ETB o box.</div>'}</div>`;
+  app.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', () => guarded(b, async () => {
+    if (!confirm('Eliminare questa registrazione? (il lotto eventualmente creato resta)')) return;
+    await api(`openings/${b.dataset.del}`, { method: 'DELETE', body: {} });
+    viewOpenings();
+  })));
+}
+
+async function viewOpeningForm(expId) {
+  shell('Registra sbustamento', '', { back: '#openings' });
+  const main = app.querySelector('main');
+  if (expId && openingState.data?.expansion_id !== expId) {
+    main.innerHTML = '<div class="empty">Carico le carte del set…</div>';
+    try { openingState.data = await api(`openings/set?expansion_id=${expId}&language=${openingState.lang}`); openingState.hits = {}; }
+    catch (e) { main.innerHTML = `<p class="neg">${esc(e.message)}</p>`; return; }
+  }
+  const d = expId ? openingState.data : null;
+  if (!d) {
+    main.innerHTML = `<div class="card"><div class="field"><label>Che set hai aperto?</label><input id="set-q" type="search" autocomplete="off" placeholder="Cerca il set…"><div id="set-res"></div></div></div>`;
+    let t;
+    main.querySelector('#set-q').addEventListener('input', (e) => {
+      clearTimeout(t);
+      t = setTimeout(async () => {
+        const q = e.target.value.trim();
+        const res = main.querySelector('#set-res');
+        if (q.length < 2) { res.innerHTML = ''; return; }
+        const sets = await api('sealed/sets?q=' + encodeURIComponent(q)).catch(() => []);
+        res.innerHTML = sets.length ? `<div class="suggest">${sets.map((x) => `<div data-exp="${x.id}"><span><strong>${esc(x.name)}</strong> <span class="small muted">${esc(x.code || '')}</span></span></div>`).join('')}</div>` : '<div class="small muted">Nessun set trovato.</div>';
+        res.querySelectorAll('[data-exp]').forEach((el) => el.addEventListener('click', () => { location.hash = `#opening/${el.dataset.exp}`; }));
+      }, 300);
+    });
+    return;
+  }
+  const all = d.rarities.flatMap((r) => r.cards.map((c) => ({ ...c, rarity: r.rarity })));
+  const byId = Object.fromEntries(all.map((c) => [c.blueprint_id, c]));
+  const render = () => {
+    const st = openingState;
+    const picked = Object.entries(st.hits).filter(([, q]) => q > 0).map(([id, q]) => ({ ...byId[id], qty: q }));
+    const value = picked.reduce((a, c) => a + (c.price || 0) * c.qty, 0);
+    const f = st.filter.toLowerCase();
+    const list = all.filter((c) => (!st.rarity || c.rarity === st.rarity) && (!f || c.name.toLowerCase().includes(f) || String(c.number || '').startsWith(f)));
+    main.innerHTML = `
+      <div class="card">
+        <strong>${esc(d.set_name || 'Set')}</strong> <a href="#opening" class="small">cambia</a>
+        <div class="grid2" style="margin-top:10px">
+          <div class="field"><label>Prodotto</label><select id="o-prod">${Object.keys(d.products).map((p) => `<option ${st.product === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></div>
+          <div class="field"><label>Bustine aperte</label><input id="o-packs" type="number" min="1" max="360" value="${st.packs}"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Lingua</label><select id="o-lang">${LANGS.map((l) => `<option value="${l}" ${st.lang === l ? 'selected' : ''}>${l.toUpperCase()}</option>`).join('')}</select></div>
+          <div class="field"><label>Pagato (€)</label><input id="o-paid" inputmode="decimal" value="${esc(st.paid)}"></div>
+        </div>
+      </div>
+      <h2>Carte speciali trovate (${picked.reduce((a, c) => a + c.qty, 0)}) · ${eur(value)}</h2>
+      <p class="small muted" style="margin-top:-8px">Segna solo le carte più rare di una Rara normale (Doppia Rara, Ultra Rara, Illustrazione…).</p>
+      <div class="card">${picked.length ? picked.map((c) => `
+        <div class="pick"><span><strong>${esc(c.name)}</strong> <span class="small muted">${esc(c.number || '')} · ${esc(c.rarity)} · ${eur(c.price)}</span></span>
+          <span class="qty"><button data-dec="${c.blueprint_id}">−</button>${c.qty}<button data-inc="${c.blueprint_id}">+</button></span></div>`).join('') : '<span class="muted small">Nessuna ancora: toccale qui sotto.</span>'}</div>
+      <input class="search" type="search" id="o-filter" placeholder="Cerca per nome o numero" value="${esc(st.filter)}">
+      <div class="chips"><button class="chip ${!st.rarity ? 'active' : ''}" data-r="">Tutte</button>${d.rarities.map((r) => `<button class="chip ${st.rarity === r.rarity ? 'active' : ''}" data-r="${esc(r.rarity)}">${esc(r.rarity)}</button>`).join('')}</div>
+      <div class="list">${list.slice(0, 80).map((c) => `
+        <div class="row" data-add="${c.blueprint_id}">${c.image_url ? `<img class="thumb" loading="lazy" src="${esc(c.image_url)}" alt="">` : '<div class="thumb"></div>'}
+          <div class="body"><div class="title">${esc(c.name)}</div><div class="sub">${esc(c.number || '')} · ${esc(c.rarity)}</div></div>
+          <div class="right"><div class="big">${eur(c.price)}</div><div class="small muted">${st.hits[c.blueprint_id] ? '✓ ' + st.hits[c.blueprint_id] : '+ aggiungi'}</div></div></div>`).join('')}</div>
+      <div class="card" style="margin-top:14px">
+        <label class="check"><input type="checkbox" id="o-complete" ${st.complete ? 'checked' : ''}> <span><strong>Ho segnato tutte le carte speciali trovate</strong><br><span class="small muted">Solo così la registrazione conta per i pull rate della community</span></span></label>
+        <label class="check"><input type="checkbox" id="o-inv" ${st.inventory ? 'checked' : ''}> Aggiungi le carte trovate al magazzino (nuovo lotto con il prezzo pagato)</label>
+        <button class="btn block" id="o-save">Salva sbustamento</button>
+      </div>`;
+    const bind = (sel, ev, fn) => main.querySelector(sel)?.addEventListener(ev, fn);
+    bind('#o-prod', 'change', (e) => { st.product = e.target.value; if (d.products[st.product]) st.packs = d.products[st.product]; render(); });
+    bind('#o-packs', 'change', (e) => { st.packs = Math.max(1, Math.min(360, +e.target.value || 1)); });
+    bind('#o-lang', 'change', (e) => { st.lang = e.target.value; });
+    bind('#o-paid', 'input', (e) => { st.paid = e.target.value; });
+    bind('#o-complete', 'change', (e) => { st.complete = e.target.checked; });
+    bind('#o-inv', 'change', (e) => { st.inventory = e.target.checked; });
+    let ft;
+    bind('#o-filter', 'input', (e) => { clearTimeout(ft); ft = setTimeout(() => { st.filter = e.target.value; render(); const i = main.querySelector('#o-filter'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 250); });
+    main.querySelectorAll('[data-r]').forEach((b) => b.addEventListener('click', () => { st.rarity = b.dataset.r; render(); }));
+    main.querySelectorAll('[data-add]').forEach((r) => r.addEventListener('click', () => { st.hits[r.dataset.add] = (st.hits[r.dataset.add] || 0) + 1; render(); }));
+    main.querySelectorAll('[data-inc]').forEach((b) => b.addEventListener('click', () => { st.hits[b.dataset.inc]++; render(); }));
+    main.querySelectorAll('[data-dec]').forEach((b) => b.addEventListener('click', () => { st.hits[b.dataset.dec]--; render(); }));
+    bind('#o-save', 'click', (e) => guarded(e.target, async () => {
+      if (!st.complete && !confirm('Non hai confermato di aver segnato tutte le carte speciali: la registrazione resterà solo tua e non conterà per i pull rate. Salvare lo stesso?')) return;
+      const r = await api('openings', { method: 'POST', body: { expansion_id: d.expansion_id, product: st.product, packs: st.packs, language: st.lang, paid: st.paid,
+        complete: st.complete, add_to_inventory: st.inventory, hits: picked.map((c) => ({ blueprint_id: c.blueprint_id, qty: c.qty })) } });
+      st.hits = {}; st.paid = ''; st.complete = false; state.lots = [];
+      main.innerHTML = `<div class="card" style="text-align:center;padding:24px">
+        <div style="font-size:40px">🎉</div><h2 style="margin:8px 0">Hai trovato ${eur(r.value)}</h2>
+        ${r.paid != null ? `<p>Pagato ${eur(r.paid)} → ${signed(r.value - r.paid)}</p>` : ''}
+        <p class="small muted">${r.complete ? `Grazie! I pull rate di questo set ora si basano su ${r.community.packs} bustine registrate da ${r.community.users} utenti.` : 'Registrazione salvata solo per te.'}</p>
+        <div class="actions" style="justify-content:center">${r.lot_id ? `<a class="btn" href="#lot/${r.lot_id}">Vedi le carte nel lotto</a>` : ''}<a class="btn secondary" href="#opening/${d.expansion_id}">Registra un altro</a></div></div>`;
+    }));
+  };
+  render();
 }
 
 // ---------- report ----------
@@ -1389,7 +1507,22 @@ function renderAdmin(d) {
         <div class="right"><span class="badge st-${r.state}">${STATE_LABEL[r.state]}</span>
           <div class="small muted" style="margin-top:4px">${r.state === 'pro' || r.state === 'trial' ? `${r.days_left} gg` : ''}</div></div>
       </div>`).join('') : '<div class="empty">Nessun negozio.</div>'}</div>`;
-  main.insertAdjacentHTML('beforeend', '<h2>Uso dell\'app (30 giorni)</h2><div id="usage"><div class="small muted">Caricamento…</div></div>');
+  main.insertAdjacentHTML('beforeend', '<h2>Uso dell\'app (30 giorni)</h2><div id="usage"><div class="small muted">Caricamento…</div></div><h2>Sbustamenti registrati</h2><div id="adm-open"></div>');
+  const renderOpenings = (o) => {
+    const box = main.querySelector('#adm-open');
+    if (!box) return;
+    box.innerHTML = `
+      <div class="card">${o.sets.length ? o.sets.map((x) => `<div class="grid2" style="padding:3px 0"><span>${esc(x.set_name || x.expansion_id)}</span><span>${x.packs} bustine · ${x.users} utenti</span></div>`).join('') : '<span class="muted">Nessun dato community ancora.</span>'}</div>
+      <p class="small muted">Controlla le registrazioni sospette (es. troppe carte speciali per bustina) ed escludile dal calcolo.</p>
+      <div class="list">${o.openings.slice(0, 50).map((x) => `<div class="row" style="cursor:default">
+        <div class="body"><div class="title">${esc(x.set_name || '')} · ${x.packs} bust.</div>
+          <div class="sub">${esc(x.email || '')} · ${x.hits} hit (${x.hits_per_pack}/bustina) · ${eur(x.value)}${x.complete ? '' : ' · incompleta'}</div></div>
+        <div class="right"><button class="btn sm ${x.excluded ? '' : 'secondary'}" data-ex="${x.id}" data-v="${x.excluded ? 0 : 1}">${x.excluded ? 'Includi' : 'Escludi'}</button></div></div>`).join('')}</div>`;
+    box.querySelectorAll('[data-ex]').forEach((b) => b.addEventListener('click', () => guarded(b, async () => {
+      renderOpenings(await api(`admin/openings/${b.dataset.ex}`, { method: 'PUT', body: { excluded: b.dataset.v === '1' } }));
+    })));
+  };
+  api('admin/openings').then(renderOpenings).catch(() => {});
   api('admin/usage').then((u) => {
     const max = Math.max(...u.funnel.map((f) => f.value), 1);
     const EV = { login: 'Accessi', signup: 'Iscrizioni', signup_referral: 'Iscrizioni da invito', referral_reward: 'Inviti premiati', item_create: 'Carte aggiunte', item_sold: 'Vendite registrate',
@@ -1451,6 +1584,8 @@ async function router() {
       case '#report': return await viewReport(+id || null);
       case '#partners': return await viewPartners();
       case '#sealed': return await viewSealed(+id || null);
+      case '#openings': return await viewOpenings();
+      case '#opening': return await viewOpeningForm(+id || null);
       default: return await viewDashboard();
     }
   } catch (e) {
